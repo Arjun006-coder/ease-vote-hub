@@ -8,25 +8,29 @@ export default async function handler(req, res) {
 
   // Handle OPTIONS request for CORS
   if (req.method === 'OPTIONS') {
-    return res.status(200).end();
+    res.status(200).end();
+    return;
   }
 
   // Only allow POST requests
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    res.status(405).json({ error: 'Method not allowed' });
+    return;
   }
 
   try {
     const { identifier, otp_code } = req.body;
 
     if (!identifier || !otp_code) {
-      return res.status(400).json({ error: 'Email and OTP code are required' });
+      res.status(400).json({ error: 'Email and OTP code are required' });
+      return;
     }
 
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(identifier)) {
-      return res.status(400).json({ error: 'Invalid email format' });
+      res.status(400).json({ error: 'Invalid email format' });
+      return;
     }
 
     // Get Gmail credentials from environment variables
@@ -36,11 +40,12 @@ export default async function handler(req, res) {
     if (!gmailUser || !gmailPassword) {
       console.error('Gmail credentials not configured');
       // Return OTP in response for development/testing
-      return res.status(500).json({
+      res.status(500).json({
         error: 'Email service not configured',
         details: 'Please set up Gmail SMTP in Vercel environment variables',
         otp_code: otp_code, // Include OTP for development
       });
+      return;
     }
 
     // Clean credentials
@@ -82,29 +87,31 @@ export default async function handler(req, res) {
       const info = await transporter.sendMail(mailOptions);
       console.log('✅ Email sent successfully:', info.messageId);
       
-      return res.status(200).json({ 
+      res.status(200).json({ 
         success: true, 
         message: 'OTP sent successfully',
         messageId: info.messageId
       });
+      return;
     } catch (emailError) {
       console.error('❌ Gmail SMTP error:', emailError.message);
       
       // Return OTP in response if email fails (for development/testing)
-      return res.status(500).json({
+      res.status(500).json({
         error: 'Failed to send email via Gmail',
         details: emailError.message,
         errorCode: emailError.code || 'UNKNOWN',
         otp_code: otp_code, // Include OTP for development
         message: 'Check browser console for OTP code. Fix Gmail authentication to enable email sending.',
       });
+      return;
     }
   } catch (error) {
     console.error('Error in send-otp-email API:', error);
-    return res.status(500).json({ 
+    res.status(500).json({ 
       error: 'Internal server error', 
       details: error.message 
     });
+    return;
   }
 }
-

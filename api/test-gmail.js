@@ -8,12 +8,14 @@ export default async function handler(req, res) {
 
   // Handle OPTIONS request for CORS
   if (req.method === 'OPTIONS') {
-    return res.status(200).end();
+    res.status(200).end();
+    return;
   }
 
   // Only allow GET requests
   if (req.method !== 'GET') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    res.status(405).json({ error: 'Method not allowed' });
+    return;
   }
 
   try {
@@ -21,10 +23,11 @@ export default async function handler(req, res) {
     const gmailPassword = process.env.GMAIL_APP_PASSWORD;
 
     if (!gmailUser || !gmailPassword) {
-      return res.status(500).json({ 
+      res.status(500).json({ 
         error: 'Gmail not configured',
         message: 'Please set GMAIL_USER and GMAIL_APP_PASSWORD in Vercel environment variables'
       });
+      return;
     }
 
     // Clean credentials
@@ -47,24 +50,26 @@ export default async function handler(req, res) {
     // Verify connection
     try {
       await transporter.verify();
-      return res.status(200).json({ 
+      res.status(200).json({ 
         success: true, 
         message: 'Gmail SMTP connection is working',
         user: cleanUser
       });
+      return;
     } catch (error) {
-      return res.status(500).json({ 
+      res.status(500).json({ 
         error: 'Gmail SMTP connection failed',
         message: error.message,
         code: error.code
       });
+      return;
     }
   } catch (error) {
     console.error('Error in test-gmail API:', error);
-    return res.status(500).json({ 
+    res.status(500).json({ 
       error: 'Internal server error', 
       details: error.message 
     });
+    return;
   }
 }
-

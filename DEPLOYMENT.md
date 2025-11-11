@@ -8,40 +8,39 @@ This guide covers deploying VoteEase to Vercel (frontend + backend API routes).
 - Supabase project (already set up)
 - Gmail account with App Password (for email OTP)
 
-## 🎯 Deployment Options
+## 🎯 Deployment to Vercel (Recommended)
 
-### Option 1: Deploy to Vercel (Recommended - Frontend + Backend)
+Vercel can host both your frontend and backend API routes as serverless functions - **all in one deployment!**
 
-Vercel can host both your frontend and backend API routes as serverless functions.
+### Step 1: Push Code to GitHub
 
-#### Step 1: Prepare for Deployment
+Make sure all your code is pushed to GitHub:
+```bash
+git add .
+git commit -m "Ready for deployment"
+git push origin main
+```
 
-1. **Install Vercel CLI** (optional, for local testing):
-   ```bash
-   npm i -g vercel
-   ```
+### Step 2: Deploy to Vercel
 
-2. **Test build locally**:
-   ```bash
-   npm run build
-   ```
+1. **Go to Vercel Dashboard**:
+   - Visit: https://vercel.com/dashboard
+   - Sign in with GitHub
 
-#### Step 2: Deploy to Vercel
+2. **Import Project**:
+   - Click **"Add New Project"**
+   - Select your repository: `Arjun006-coder/ease-vote-hub`
+   - Click **"Import"**
 
-1. **Via Vercel Dashboard**:
-   - Go to [Vercel Dashboard](https://vercel.com/dashboard)
-   - Click "Add New Project"
-   - Import your GitHub repository: `Arjun006-coder/ease-vote-hub`
-   - Vercel will auto-detect Vite framework
-
-2. **Configure Build Settings**:
-   - Framework Preset: **Vite**
+3. **Configure Project** (Vercel auto-detects):
+   - Framework Preset: **Vite** (auto-detected)
+   - Root Directory: `./` (default)
    - Build Command: `npm run build` (auto-detected)
    - Output Directory: `dist` (auto-detected)
    - Install Command: `npm install` (auto-detected)
 
-3. **Set Environment Variables** in Vercel:
-   Go to Project Settings → Environment Variables and add:
+4. **Set Environment Variables**:
+   Click **"Environment Variables"** and add:
    ```
    VITE_SUPABASE_URL=your-supabase-project-url
    VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
@@ -51,42 +50,66 @@ Vercel can host both your frontend and backend API routes as serverless function
    ```
    
    **Important**: 
-   - Set these for **Production**, **Preview**, and **Development** environments
-   - `VITE_API_URL` is NOT needed in production (API routes use same domain)
+   - Set for **Production**, **Preview**, and **Development** environments
+   - Do NOT set `VITE_API_URL` in production (API routes use same domain)
+   - Click **"Save"** after adding each variable
 
-4. **Deploy**:
-   - Click "Deploy"
-   - Wait for deployment to complete
+5. **Deploy**:
+   - Click **"Deploy"**
+   - Wait for deployment to complete (2-3 minutes)
    - Your app will be live at `https://your-project.vercel.app`
 
-#### Step 3: Verify Deployment
+### Step 3: Verify Deployment
 
-1. **Check API Routes**:
+1. **Check API Health**:
    - Visit: `https://your-project.vercel.app/api/health`
    - Should return: `{"status":"ok","message":"Backend API is running",...}`
 
-2. **Test Email OTP**:
+2. **Test Application**:
+   - Visit your Vercel URL
    - Try registering a new user
    - Check if OTP email is sent
+   - Test voting functionality
 
-3. **Update Supabase CORS** (if needed):
-   - In Supabase Dashboard → Settings → API
-   - Add your Vercel domain to allowed origins
+## 🔧 Local Development
 
-### Option 2: Separate Deployment (Frontend + Backend)
+### Option 1: Local Backend Server (Recommended for Development)
 
-If you prefer to host backend separately:
+1. **Start Backend Server**:
+   ```bash
+   npm run server
+   ```
+   This starts the Express server on `http://localhost:3001`
 
-#### Frontend: Vercel
-- Deploy frontend to Vercel
-- Set `VITE_API_URL` to your backend URL
+2. **Set Environment Variable** (in `.env.local`):
+   ```env
+   VITE_API_URL=http://localhost:3001
+   ```
 
-#### Backend: Railway / Render / Fly.io
-- Deploy `server.js` to Railway, Render, or Fly.io
-- Set environment variables
-- Update `VITE_API_URL` in Vercel to point to backend URL
+3. **Start Frontend**:
+   ```bash
+   npm run dev
+   ```
+   Vite will proxy `/api/*` requests to `http://localhost:3001`
 
-## 📁 Vercel Project Structure
+### Option 2: Vercel Dev (Testing API Routes Locally)
+
+1. **Install Vercel CLI**:
+   ```bash
+   npm i -g vercel
+   ```
+
+2. **Run Vercel Dev**:
+   ```bash
+   vercel dev
+   ```
+   This starts both frontend and API routes locally
+
+3. **Access Application**:
+   - Frontend: `http://localhost:3000`
+   - API routes work automatically (same domain)
+
+## 📁 Project Structure
 
 ```
 ├── api/                    # Vercel serverless functions
@@ -98,74 +121,84 @@ If you prefer to host backend separately:
 └── package.json
 ```
 
-## 🔧 Environment Variables in Vercel
+## 🔧 Environment Variables
 
-### Required Variables
+### Required Variables (Set in Vercel)
 
 1. **Supabase Configuration**:
    - `VITE_SUPABASE_URL` - Your Supabase project URL
    - `VITE_SUPABASE_ANON_KEY` - Supabase anonymous key
-   - `SUPABASE_SERVICE_KEY` - Supabase service role key (for server-side operations)
+   - `SUPABASE_SERVICE_KEY` - Supabase service role key
 
 2. **Gmail SMTP** (for email OTP):
    - `GMAIL_USER` - Your Gmail address
    - `GMAIL_APP_PASSWORD` - 16-character Gmail App Password
 
-### How to Set Environment Variables
+### Optional Variables
 
-1. Go to Vercel Dashboard → Your Project → Settings → Environment Variables
-2. Add each variable:
-   - **Key**: Variable name (e.g., `VITE_SUPABASE_URL`)
-   - **Value**: Variable value
-   - **Environment**: Select Production, Preview, and/or Development
-3. Click "Save"
-4. **Redeploy** your project for changes to take effect
+- `VITE_API_URL` - Only set for local development with separate backend server
+  - Local: `http://localhost:3001`
+  - Production: Leave unset (API routes use same domain)
 
-## 🚨 Important Notes
+## 🚨 Troubleshooting
 
-### API Routes
+### API Routes Return 404
 
-- Vercel API routes are serverless functions
-- They automatically handle CORS
-- No need to set `VITE_API_URL` in production (uses same domain)
-- API routes are in `/api/*` directory
+**Problem**: `/api/health` returns 404 on Vercel
 
-### Gmail App Password
+**Solution**:
+1. Verify API routes are in `/api` directory at project root
+2. Check `vercel.json` configuration
+3. Verify deployment logs in Vercel Dashboard
+4. Make sure API route files export default function
+5. Redeploy after making changes
 
-- Must be 16 characters (no spaces)
-- Enable 2-Step Verification first
-- Generate from: https://myaccount.google.com/apppasswords
-- Keep it secure - never commit to Git
+### "Failed to fetch" Error
 
-### Supabase Storage
+**Problem**: Frontend can't call API routes
 
-- Storage bucket must be created in Supabase Dashboard
-- RLS is disabled (for development)
-- For production, enable RLS and create proper policies
+**Solution**:
+1. **In Production (Vercel)**:
+   - Don't set `VITE_API_URL` environment variable
+   - API routes use same domain automatically
+   - Check browser console for CORS errors
 
-## 🔍 Troubleshooting
+2. **In Development**:
+   - If using local backend: Set `VITE_API_URL=http://localhost:3001`
+   - If using Vercel dev: Don't set `VITE_API_URL`
+   - Make sure backend server is running (`npm run server`)
 
-### "API route not found"
-- Check that `api/` directory exists in project root
-- Verify `vercel.json` configuration
-- Check Vercel deployment logs
+### "ERR_BLOCKED_BY_CLIENT" Error
 
-### "Gmail authentication failed"
-- Verify `GMAIL_APP_PASSWORD` is correct (16 characters, no spaces)
-- Check 2-Step Verification is enabled
-- Verify environment variables are set in Vercel
-- Check Vercel function logs for detailed errors
+**Problem**: Browser blocking API requests
 
-### "CORS error"
-- Vercel API routes handle CORS automatically
-- Check that frontend is calling API on same domain
-- Verify `VITE_API_URL` is not set in production
+**Solution**:
+1. Check if ad blocker is enabled (disable for localhost)
+2. Check browser extensions
+3. Try in incognito mode
+4. Check browser console for detailed errors
 
-### "Environment variable not found"
-- Verify variables are set in Vercel Dashboard
-- Check variable names match exactly
-- Redeploy after adding/changing variables
-- Variables starting with `VITE_` are exposed to frontend
+### Gmail Authentication Failed
+
+**Problem**: OTP emails not sending
+
+**Solution**:
+1. Verify `GMAIL_APP_PASSWORD` is 16 characters (no spaces)
+2. Check 2-Step Verification is enabled
+3. Verify environment variables are set in Vercel
+4. Check Vercel function logs for detailed errors
+5. Test Gmail connection: `https://your-project.vercel.app/api/test-gmail`
+
+### Environment Variables Not Working
+
+**Problem**: Variables not available in production
+
+**Solution**:
+1. Verify variables are set in Vercel Dashboard
+2. Check variable names match exactly (case-sensitive)
+3. Redeploy after adding/changing variables
+4. Variables starting with `VITE_` are exposed to frontend
+5. Other variables are only available in API routes
 
 ## 📝 Post-Deployment Checklist
 
@@ -175,10 +208,39 @@ If you prefer to host backend separately:
 - [ ] Test voting functionality
 - [ ] Verify Supabase connection
 - [ ] Check environment variables are set
-- [ ] Update Supabase CORS settings
+- [ ] Update Supabase CORS settings (if needed)
 - [ ] Test on mobile devices
 - [ ] Verify HTTPS is working
 - [ ] Check browser console for errors
+
+## 🔄 Updating Deployment
+
+After making changes:
+
+1. **Push to GitHub**:
+   ```bash
+   git add .
+   git commit -m "Update deployment"
+   git push origin main
+   ```
+
+2. **Vercel Auto-Deploys**:
+   - Vercel automatically detects GitHub pushes
+   - New deployment starts automatically
+   - Check Vercel Dashboard for deployment status
+
+3. **Manual Redeploy** (if needed):
+   - Go to Vercel Dashboard
+   - Click on your project
+   - Click "Redeploy" on latest deployment
+
+## 💡 Tips
+
+1. **API Routes**: Vercel automatically detects files in `/api` directory
+2. **Environment Variables**: Set in Vercel Dashboard, not in code
+3. **CORS**: API routes handle CORS automatically
+4. **Logs**: Check Vercel function logs for debugging
+5. **Testing**: Use Vercel Preview deployments for testing
 
 ## 🎉 Success!
 
@@ -188,9 +250,9 @@ Your VoteEase application should now be live on Vercel!
 
 ---
 
-## 🔄 Alternative: Deploy Backend Separately
+## 🔄 Alternative: Separate Backend Deployment
 
-If you prefer to keep backend separate:
+If you prefer to host backend separately:
 
 ### Backend: Railway / Render
 
@@ -214,8 +276,8 @@ If you prefer to keep backend separate:
 3. **Update Frontend**:
    - Set `VITE_API_URL` in Vercel to your backend URL
    - Example: `VITE_API_URL=https://your-backend.railway.app`
+   - Redeploy frontend
 
 ---
 
 **Need Help?** Check Vercel documentation: https://vercel.com/docs
-
