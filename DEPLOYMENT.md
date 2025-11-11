@@ -147,11 +147,32 @@ git push origin main
 **Problem**: `/api/health` returns 404 on Vercel
 
 **Solution**:
-1. Verify API routes are in `/api` directory at project root
-2. Check `vercel.json` configuration
-3. Verify deployment logs in Vercel Dashboard
-4. Make sure API route files export default function
-5. Redeploy after making changes
+1. **Verify API routes exist**:
+   - Check that `/api/health.js`, `/api/send-otp-email.js` exist in project root
+   - Files must be in `/api` directory (not in `/src/api`)
+
+2. **Check vercel.json**:
+   - Ensure rewrites exclude `/api/*` routes
+   - Example: `"source": "/((?!api).*)"` excludes API routes
+
+3. **Check deployment logs**:
+   - Go to Vercel Dashboard → Your Project → Deployments
+   - Click on latest deployment → View Function Logs
+   - Check if API routes are being built
+
+4. **Verify API route format**:
+   - Must export default function: `export default function handler(req, res)`
+   - Use ES modules (since `package.json` has `"type": "module"`)
+
+5. **Redeploy**:
+   - Push changes to GitHub
+   - Vercel will auto-deploy
+   - Check deployment status
+
+6. **Manual verification**:
+   - Check Vercel Dashboard → Functions tab
+   - You should see `/api/health`, `/api/send-otp-email` listed
+   - If not listed, API routes aren't being detected
 
 ### "Failed to fetch" Error
 
