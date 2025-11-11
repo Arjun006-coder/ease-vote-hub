@@ -45,15 +45,31 @@ export const Features = () => {
           {features.map((feature, index) => (
             <motion.div
               key={feature.title}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
+              initial={{ opacity: 0, y: 30, scale: 0.95 }}
+              whileInView={{ opacity: 1, y: 0, scale: 1 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.6, delay: index * 0.2 }}
-              className="glass-card p-8 hover-scale hover-glow group"
+              transition={{ 
+                duration: 0.6, 
+                delay: index * 0.15,
+                type: "spring",
+                stiffness: 100
+              }}
+              whileHover={{ 
+                y: -8,
+                transition: { duration: 0.3 }
+              }}
+              className="glass-card p-8 hover-scale hover-glow group relative overflow-hidden"
             >
-              <div className={`${feature.color} mb-4 inline-block`}>
+              {/* Shimmer effect on hover */}
+              <div className="absolute inset-0 -z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 shimmer" />
+              
+              <motion.div 
+                className={`${feature.color} mb-4 inline-block`}
+                whileHover={{ rotate: [0, -10, 10, -10, 0] }}
+                transition={{ duration: 0.5 }}
+              >
                 <feature.icon size={48} />
-              </div>
+              </motion.div>
               <h3 className="text-2xl font-bold text-white mb-3">
                 {feature.title}
               </h3>

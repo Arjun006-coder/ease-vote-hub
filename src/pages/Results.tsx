@@ -302,7 +302,7 @@ const Results = () => {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <Loader2 className="w-8 h-8 animate-spin text-white" />
       </div>
     );
   }
@@ -582,11 +582,11 @@ const Results = () => {
 
           {/* Your Vote */}
           {userVote && (
-            <Card className="glass-card border-white/20 border-2 border-primary/50">
+            <Card className="glass-card border-white/20 border-2 border-white/40">
               <CardHeader>
                 <CardTitle className="text-white flex items-center gap-2">
                   Your Vote
-                  <Badge className="bg-primary text-white">Recorded</Badge>
+                  <Badge className="bg-white/20 text-white border border-white/30">Recorded</Badge>
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -599,8 +599,8 @@ const Results = () => {
                       Cast on {new Date(userVote.voted_at).toLocaleString()}
                     </p>
                   </div>
-                  <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center">
-                    <Trophy className="w-8 h-8 text-primary" />
+                  <div className="w-16 h-16 rounded-full bg-white/10 flex items-center justify-center">
+                    <Trophy className="w-8 h-8 text-warning" />
                   </div>
                 </div>
               </CardContent>
@@ -639,7 +639,7 @@ const Results = () => {
                     />
                     <Button
                       onClick={handlePostComment}
-                      className="bg-primary hover:bg-primary/90"
+                      className="bg-white text-black hover:bg-white/90 shadow-lg hover:shadow-xl transition-all duration-300"
                       disabled={!newComment.trim()}
                     >
                       Post Comment
@@ -650,7 +650,7 @@ const Results = () => {
                 {/* Comments List */}
                 {loadingComments ? (
                   <div className="text-center py-8">
-                    <Loader2 className="w-6 h-6 animate-spin text-primary mx-auto" />
+                    <Loader2 className="w-6 h-6 animate-spin text-white mx-auto" />
                   </div>
                 ) : comments.length === 0 ? (
                   <div className="text-center py-8 text-white/70">

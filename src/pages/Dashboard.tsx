@@ -346,18 +346,30 @@ const Dashboard = () => {
               {/* Stats */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                 {stats.map((stat, index) => (
-                  <Card key={index} className="glass-card border-white/20">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-medium text-white/70">
-                        {stat.label}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className={`text-3xl font-bold ${stat.color}`}>
-                        {stat.value}
-                      </div>
-                    </CardContent>
-                  </Card>
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: index * 0.1 }}
+                  >
+                    <Card className="glass-card border-white/20 hover-scale">
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium text-white/70">
+                          {stat.label}
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <motion.div 
+                          className={`text-3xl font-bold ${stat.color}`}
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          transition={{ duration: 0.3, delay: index * 0.1 + 0.2 }}
+                        >
+                          {stat.value}
+                        </motion.div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
                 ))}
               </div>
 
@@ -422,10 +434,11 @@ const Dashboard = () => {
                         </div>
                       </CardContent>
                     </Card>
+                    </motion.div>
                     )
                   ))}
                 </div>
-              </div>
+              </motion.div>
 
               {/* Recent Activity */}
               <Card className="glass-card border-white/20">

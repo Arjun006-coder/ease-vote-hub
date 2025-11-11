@@ -328,16 +328,31 @@ const VoteCasting = () => {
           className="space-y-6"
         >
           {/* Header */}
-          <div className="glass-card p-8 border-white/20">
+          <motion.div 
+            className="glass-card p-8 border-white/20"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+          >
             <div className="flex items-start justify-between mb-4">
-              <div>
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.6, delay: 0.1 }}
+              >
                 <h1 className="text-4xl font-bold text-white mb-2">{voteSession.title}</h1>
                 <p className="text-white/70 leading-relaxed">{voteSession.description || 'No description'}</p>
-              </div>
-              <Badge className="bg-success text-white text-lg px-4 py-2">
-                <Clock className="w-4 h-4 mr-2" />
-                {getTimeRemaining()}
-              </Badge>
+              </motion.div>
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+              >
+                <Badge className="bg-success text-white text-lg px-4 py-2 animate-pulse-slow">
+                  <Clock className="w-4 h-4 mr-2" />
+                  {getTimeRemaining()}
+                </Badge>
+              </motion.div>
             </div>
 
             <div className="flex items-center gap-6 text-white/70 text-sm">
@@ -349,7 +364,11 @@ const VoteCasting = () => {
           </div>
 
           {/* Options */}
-          <div>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.3 }}
+          >
             <h2 className="text-2xl font-bold text-white mb-4">Select Your Choice</h2>
             {voteOptions.length === 0 ? (
               <Card className="glass-card border-white/20">
@@ -360,7 +379,7 @@ const VoteCasting = () => {
             ) : (
               <RadioGroup value={selectedOption} onValueChange={setSelectedOption}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {voteOptions.map((option) => {
+                  {voteOptions.map((option, index) => {
                     const optionText = option.option_text;
                     const initials = optionText.split(" ").map((n: string) => n[0]).join("").substring(0, 2).toUpperCase();
                     const details = option.additional_data?.details || '';
@@ -368,14 +387,18 @@ const VoteCasting = () => {
                     return (
                       <motion.div
                         key={option.id}
-                        whileHover={{ scale: 1.02 }}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5, delay: index * 0.1 + 0.4 }}
+                        whileHover={{ scale: 1.03, y: -4 }}
+                        whileTap={{ scale: 0.98 }}
                         className="relative"
                       >
                         <Card
                           className={`glass-card border-2 cursor-pointer transition-all ${
                             selectedOption === option.id
-                              ? "border-primary glow-shadow"
-                              : "border-white/20 hover:border-primary/50"
+                              ? "border-white/40 glow-shadow shadow-lg"
+                              : "border-white/20 hover:border-white/30"
                           }`}
                           onClick={() => setSelectedOption(option.id)}
                         >
@@ -447,9 +470,14 @@ const VoteCasting = () => {
                     </div>
                   </div>
                   {!gpsGranted && (
-                    <Button onClick={handleGrantGPS} className="bg-primary hover:bg-primary/90">
-                      Grant Permission
-                    </Button>
+                    <motion.div
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      <Button onClick={handleGrantGPS} className="bg-white text-black hover:bg-white/90 shadow-lg hover:shadow-xl transition-all duration-300">
+                        Grant Permission
+                      </Button>
+                    </motion.div>
                   )}
                 </div>
               </CardContent>
