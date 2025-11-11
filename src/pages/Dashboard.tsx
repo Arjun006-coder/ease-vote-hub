@@ -166,9 +166,67 @@ const Dashboard = () => {
         if (votesError) throw votesError;
 
         // Transform votes into vote history format
-        const history = (votes || []).map((vote: any) => {
+        // For each vote, we need to fetch the session results to get winner and total votes
+        const historyPromises = (votes || []).map(async (vote: any) => {
           const session = vote.voting_sessions;
           const option = vote.voting_options;
+          
+          // Fetch results for this session to get winner and total votes
+          let winner = 'N/A';
+          let totalVotes = 0;
+          
+          if (session?.id) {
+            try {
+              // Fetch all votes for this session
+              const { data: sessionVotes, error: votesError } = await supabase
+                .from('votes')
+                .select('option_id')
+                .eq('session_id', session.id)
+                .eq('is_valid', true);
+              
+              if (!votesError && sessionVotes) {
+                totalVotes = sessionVotes.length;
+                
+                // Calculate winner (option with most votes)
+                const voteCounts: { [key: string]: number } = {};
+                sessionVotes.forEach((v: any) => {
+                  voteCounts[v.option_id] = (voteCounts[v.option_id] || 0) + 1;
+                });
+                
+                // Find option with max votes
+                const voteCountValues = Object.values(voteCounts);
+                if (voteCountValues.length > 0) {
+                  const maxVotes = Math.max(...voteCountValues);
+                  const winnerOptionId = Object.keys(voteCounts).find(
+                    key => voteCounts[key] === maxVotes
+                  );
+                  
+                  if (winnerOptionId && maxVotes > 0) {
+                  // Fetch winner option text
+                  const { data: winnerOption } = await supabase
+                    .from('voting_options')
+                    .select('option_text')
+                    .eq('id', winnerOptionId)
+                    .single();
+                  
+                  if (winnerOption) {
+                    // Check for ties
+                    const winnersCount = Object.values(voteCounts).filter(
+                      count => count === maxVotes
+                    ).length;
+                    
+                    if (winnersCount > 1) {
+                      winner = 'Tie';
+                    } else {
+                      winner = winnerOption.option_text;
+                    }
+                  }
+                }
+              }
+            } catch (error) {
+              console.error('Error fetching session results:', error);
+            }
+          }
           
           return {
             id: vote.id,
@@ -177,8 +235,12 @@ const Dashboard = () => {
             selected: option?.option_text || 'Unknown Option',
             sessionId: vote.session_id,
             votedAt: vote.voted_at,
+            winner: winner,
+            totalVotes: totalVotes,
           };
         });
+        
+        const history = await Promise.all(historyPromises);
 
         setVoteHistory(history);
 
@@ -518,7 +580,7 @@ const Dashboard = () => {
                         <Button
                           variant="outline"
                           className="w-full border-white/30 text-white hover:bg-white/10"
-                          onClick={() => navigate(`/results/${vote.id}`)}
+                          onClick={() => navigate(`/results/${vote.sessionId}`)}
                         >
                           View Full Results
                         </Button>

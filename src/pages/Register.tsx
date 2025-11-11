@@ -122,7 +122,7 @@ const Register = () => {
     
     toast({
       title: 'ID Card Verified! ✅',
-      description: 'Barcode verified and unique. Now verify your email.',
+      description: 'ID card verified and unique. Now verify your email.',
     });
 
     // Move to email verification step
@@ -438,7 +438,7 @@ const Register = () => {
                     <strong>Step 1: Verify Your ID Card</strong>
                   </p>
                   <p className="text-xs text-white/70 mt-1">
-                    Upload your ID card image. We'll scan the barcode to verify it's unique and hasn't been used before.
+                    Upload your ID card image. We'll verify it's unique and hasn't been used before.
                   </p>
                 </div>
                 
@@ -457,7 +457,7 @@ const Register = () => {
                     <strong>✅ ID Card Verified!</strong>
                   </p>
                   <p className="text-xs text-white/70 mt-1">
-                    Your ID card barcode is unique. Now verify your email address.
+                    Your ID card is unique. Now verify your email address.
                   </p>
                 </div>
 
@@ -523,7 +523,7 @@ const Register = () => {
                     <span className="font-semibold">Verifications Complete!</span>
                   </div>
                   <div className="text-sm text-white/70 space-y-1">
-                    <p>✅ ID Card: Barcode verified and unique</p>
+                    <p>✅ ID Card: Verified and unique</p>
                     <p>✅ Email: {email}</p>
                   </div>
                   <p className="text-sm text-white/90 mt-3 font-medium">

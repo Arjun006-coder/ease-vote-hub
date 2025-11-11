@@ -5,7 +5,7 @@ const features = [
   {
     icon: Lock,
     title: "Secure Authentication",
-    description: "ID card verification with barcode scanning ensures only authorized users can vote",
+    description: "ID card verification ensures only authorized users can vote",
     color: "text-success",
   },
   {

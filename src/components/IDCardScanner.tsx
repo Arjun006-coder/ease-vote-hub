@@ -61,10 +61,10 @@ export const IDCardScanner = ({ onVerified, onCancel }: IDCardScannerProps) => {
         
         toast({
           title: 'Image uploaded',
-          description: 'Image uploaded successfully. Scanning barcode automatically...',
+          description: 'Image uploaded successfully. Verifying ID card automatically...',
         });
         
-        // Automatically attempt to scan barcode after a short delay
+        // Automatically attempt to verify ID card after a short delay
         setTimeout(() => {
           scanBarcodeFromUploadedImage();
         }, 500);
@@ -425,51 +425,51 @@ export const IDCardScanner = ({ onVerified, onCancel }: IDCardScannerProps) => {
         }
       }
 
-      // If barcode detected, verify it with OCR
+      // If ID card detected, verify it with OCR
       if (decodedText && decodedText.trim().length > 0) {
-        console.log('Barcode detected:', decodedText);
+        console.log('ID card detected:', decodedText);
         
         // Read text from image using OCR to verify
         toast({
-          title: 'Barcode detected! ✅',
-          description: 'Verifying barcode with ID card text...',
+          title: 'ID Card Detected! ✅',
+          description: 'Verifying ID card details...',
         });
         
         try {
           const ocrText = await readTextFromImage(uploadedImage);
-          const barcodeText = decodedText.trim();
+          const idCardText = decodedText.trim();
           
-          // Check if barcode text appears in OCR results (case-insensitive)
-          const barcodeFoundInOCR = ocrText.some(line => 
-            line.toLowerCase().includes(barcodeText.toLowerCase()) ||
-            barcodeText.toLowerCase().includes(line.toLowerCase().replace(/\s/g, ''))
+          // Check if ID card text appears in OCR results (case-insensitive)
+          const idCardFoundInOCR = ocrText.some(line => 
+            line.toLowerCase().includes(idCardText.toLowerCase()) ||
+            idCardText.toLowerCase().includes(line.toLowerCase().replace(/\s/g, ''))
           );
           
-          // Also check for partial matches (barcode might be encoded)
+          // Also check for partial matches (ID card might be encoded)
           const hasRelevantText = ocrText.some(line => {
             const cleanLine = line.replace(/\s/g, '').toLowerCase();
             return cleanLine.length > 0 && (
-              barcodeText.toLowerCase().includes(cleanLine) ||
-              cleanLine.includes(barcodeText.toLowerCase().substring(0, 5))
+              idCardText.toLowerCase().includes(cleanLine) ||
+              cleanLine.includes(idCardText.toLowerCase().substring(0, 5))
             );
           });
           
-          if (barcodeFoundInOCR || hasRelevantText) {
-            console.log('✅ Barcode verified with OCR text');
-            setBarcodeData(barcodeText);
+          if (idCardFoundInOCR || hasRelevantText) {
+            console.log('✅ ID card verified with OCR text');
+            setBarcodeData(idCardText);
             toast({
-              title: 'Barcode verified! ✅',
-              description: 'Barcode detected and verified from full ID card image',
+              title: 'ID Card Verified! ✅',
+              description: 'ID card detected and verified from image',
             });
           } else {
-            console.log('⚠️ Barcode detected but OCR verification inconclusive');
+            console.log('⚠️ ID card detected but OCR verification inconclusive');
             console.log('OCR text:', ocrText);
-            console.log('Barcode:', barcodeText);
-            // Still accept it if barcode was scanned (might be encoded differently)
-            setBarcodeData(barcodeText);
+            console.log('ID Card Data:', idCardText);
+            // Still accept it if ID card was scanned (might be encoded differently)
+            setBarcodeData(idCardText);
             toast({
-              title: 'Barcode detected! ✅',
-              description: 'Barcode scanned from ID card image. Proceeding with verification...',
+              title: 'ID Card Detected! ✅',
+              description: 'ID card scanned from image. Proceeding with verification...',
             });
           }
           
@@ -479,11 +479,11 @@ export const IDCardScanner = ({ onVerified, onCancel }: IDCardScannerProps) => {
           return;
         } catch (ocrError: any) {
           console.error('OCR verification error:', ocrError);
-          // Still accept barcode if OCR fails
+          // Still accept ID card if OCR fails
           setBarcodeData(decodedText.trim());
           toast({
-            title: 'Barcode detected! ✅',
-            description: 'Barcode scanned successfully from ID card image',
+            title: 'ID Card Detected! ✅',
+            description: 'ID card scanned successfully from image',
           });
           setScanAttempts(0);
           setScanning(false);
@@ -492,17 +492,17 @@ export const IDCardScanner = ({ onVerified, onCancel }: IDCardScannerProps) => {
         }
       }
 
-      // STRATEGY 6: Try OCR to extract barcode number from text (last resort)
-      // Some ID cards have the barcode number printed below the barcode
+      // STRATEGY 6: Try OCR to extract ID card number from text (last resort)
+      // Some ID cards have the ID number printed on the card
       if (!decodedText) {
-        console.log('🔍 Step 6: Trying OCR to extract barcode number from text...');
+        console.log('🔍 Step 6: Trying OCR to extract ID card number from text...');
         try {
           const ocrText = await readTextFromImage(uploadedImage);
           console.log('OCR extracted text:', ocrText);
           
-          // Look for patterns that might be barcode numbers (e.g., "202400117", "2024CS117")
-          // Barcode numbers are often alphanumeric and appear near the bottom
-          const barcodePatterns = ocrText
+          // Look for patterns that might be ID card numbers (e.g., "202400117", "2024CS117")
+          // ID card numbers are often alphanumeric and appear near the bottom
+          const idCardPatterns = ocrText
             .filter(line => {
               const cleaned = line.replace(/\s/g, '').toUpperCase();
               // Look for patterns like: numbers, alphanumeric codes, etc.
@@ -511,18 +511,18 @@ export const IDCardScanner = ({ onVerified, onCancel }: IDCardScannerProps) => {
             })
             .map(line => line.replace(/\s/g, '').toUpperCase());
           
-          if (barcodePatterns.length > 0) {
-            console.log('Found potential barcode numbers from OCR:', barcodePatterns);
-            // Use the longest pattern (most likely to be the barcode)
-            const potentialBarcode = barcodePatterns.sort((a, b) => b.length - a.length)[0];
-            console.log(`⚠️ Using OCR-extracted barcode: ${potentialBarcode}`);
-            decodedText = potentialBarcode;
+          if (idCardPatterns.length > 0) {
+            console.log('Found potential ID card numbers from OCR:', idCardPatterns);
+            // Use the longest pattern (most likely to be the ID card number)
+            const potentialIdCard = idCardPatterns.sort((a, b) => b.length - a.length)[0];
+            console.log(`⚠️ Using OCR-extracted ID card number: ${potentialIdCard}`);
+            decodedText = potentialIdCard;
             
-            // OCR-extracted barcode is already verified (it came from the image text)
-            setBarcodeData(potentialBarcode);
+            // OCR-extracted ID card number is already verified (it came from the image text)
+            setBarcodeData(potentialIdCard);
             toast({
-              title: 'Barcode extracted! ✅',
-              description: 'Barcode number extracted from ID card text. This is a fallback method when barcode scanning fails.',
+              title: 'ID Card Detected! ✅',
+              description: 'ID card number extracted from image text. This is a fallback method when scanning fails.',
             });
             setScanAttempts(0);
             setScanning(false);
@@ -536,7 +536,7 @@ export const IDCardScanner = ({ onVerified, onCancel }: IDCardScannerProps) => {
 
       // If all methods failed (including OCR extraction)
       if (!decodedText) {
-        console.error('❌ All barcode scanning methods failed. Last error:', lastError);
+        console.error('❌ All ID card scanning methods failed. Last error:', lastError);
         console.error('Scanning attempted:');
         console.error('  - Full original image (ZXing)');
         console.error('  - Bottom regions of original image (ZXing)');
@@ -547,24 +547,24 @@ export const IDCardScanner = ({ onVerified, onCancel }: IDCardScannerProps) => {
         
         if (scanAttempts >= 3) {
           toast({
-            title: 'Barcode scanning failed',
-            description: 'Tried 6 different scanning methods but couldn\'t detect the barcode. Please check the browser console for details. Ensure: 1) Full ID card is visible, 2) Barcode is clear, 3) Good lighting, 4) High resolution.',
+            title: 'ID Card Scanning Failed',
+            description: 'Could not verify the ID card. Please check the browser console for details. Ensure: 1) Full ID card is visible, 2) Image is clear, 3) Good lighting, 4) High resolution.',
             variant: 'destructive',
             duration: 12000,
           });
         } else {
           toast({
-            title: 'Barcode not detected',
-            description: `Attempt ${scanAttempts}/3 failed. Check browser console (F12) for scanning details. The system tried 6 different methods.`,
+            title: 'ID Card Not Detected',
+            description: `Attempt ${scanAttempts}/3 failed. Check browser console (F12) for scanning details. The system tried multiple verification methods.`,
             variant: 'destructive',
           });
         }
       }
     } catch (error: any) {
-      console.error('Error scanning barcode:', error);
+      console.error('Error scanning ID card:', error);
       toast({
         title: 'Scan failed',
-        description: 'Failed to scan barcode. Please ensure the full ID card image is clear.',
+        description: 'Failed to verify ID card. Please ensure the full ID card image is clear.',
         variant: 'destructive',
       });
     } finally {
@@ -574,11 +574,11 @@ export const IDCardScanner = ({ onVerified, onCancel }: IDCardScannerProps) => {
   };
 
   const handleVerify = async () => {
-    // CRITICAL: Only allow verification if barcode was scanned automatically
+    // CRITICAL: Only allow verification if ID card was scanned automatically
     if (!barcodeData) {
       toast({
-        title: 'Barcode required',
-        description: 'Barcode must be scanned automatically from the ID card image. Manual entry is not allowed for security reasons.',
+        title: 'ID Card Required',
+        description: 'ID card must be scanned automatically from the image. Manual entry is not allowed for security reasons.',
         variant: 'destructive',
       });
       return;
@@ -628,7 +628,7 @@ export const IDCardScanner = ({ onVerified, onCancel }: IDCardScannerProps) => {
         // ID card already registered by another user - BLOCK registration
         toast({
           title: 'ID Card Already Registered',
-          description: 'This ID card barcode has already been registered by another user. Each ID card can only be used once. Please use a different ID card.',
+          description: 'This ID card has already been registered by another user. Each ID card can only be used once. Please use a different ID card.',
           variant: 'destructive',
         });
         setProcessing(false);
@@ -641,13 +641,13 @@ export const IDCardScanner = ({ onVerified, onCancel }: IDCardScannerProps) => {
         return;
       }
 
-      // Barcode is unique - proceed with verification
+      // ID card is unique - proceed with verification
       // NOTE: We don't upload the image here because the user doesn't exist yet
       // The image will be uploaded AFTER user creation in Register.tsx
       // We pass the image data URL so it can be uploaded to the correct user folder
       toast({
         title: 'ID Card Verified! ✅',
-        description: 'Barcode is unique and verified. Proceeding to email verification...',
+        description: 'ID card is unique and verified. Proceeding to email verification...',
       });
 
       // Pass hash, barcode content, and image data URL
@@ -680,7 +680,7 @@ export const IDCardScanner = ({ onVerified, onCancel }: IDCardScannerProps) => {
           ID Card Verification
         </CardTitle>
         <CardDescription className="text-white/70">
-          Upload a clear photo of your full ID card (not just the barcode). The system will automatically detect and scan the barcode from the image to verify it's unique and hasn't been used before.
+          Upload a clear photo of your full ID card. The system will automatically verify it's unique and hasn't been used before.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -724,7 +724,7 @@ export const IDCardScanner = ({ onVerified, onCancel }: IDCardScannerProps) => {
                 <X className="w-4 h-4" />
               </Button>
               
-              {/* Scan Barcode Button - Show if barcode not detected */}
+              {/* Scan ID Card Button - Show if ID card not detected */}
               {!barcodeData && (
                 <div className="absolute bottom-2 left-1/2 -translate-x-1/2">
                   <Button
@@ -754,13 +754,13 @@ export const IDCardScanner = ({ onVerified, onCancel }: IDCardScannerProps) => {
             <div className="p-4 rounded-lg bg-success/20 border border-success/30">
               <div className="flex items-center gap-2 text-success mb-2">
                 <CheckCircle className="w-5 h-5" />
-                <span className="font-semibold">Barcode detected successfully</span>
+                <span className="font-semibold">ID Card detected successfully</span>
               </div>
               <p className="text-sm text-white/70 font-mono break-all">
-                Barcode: {barcodeData.substring(0, 50)}{barcodeData.length > 50 ? '...' : ''}
+                ID Card: {barcodeData.substring(0, 50)}{barcodeData.length > 50 ? '...' : ''}
               </p>
               <p className="text-xs text-white/50 mt-2">
-                ✅ Barcode was scanned automatically from your ID card image
+                ✅ ID card was scanned automatically from your image
               </p>
             </div>
           )}
@@ -771,12 +771,12 @@ export const IDCardScanner = ({ onVerified, onCancel }: IDCardScannerProps) => {
               <div className="flex items-start gap-2 text-warning mb-2">
                 <AlertCircle className="w-5 h-5 mt-0.5" />
                 <div className="flex-1">
-                  <span className="font-semibold block mb-2">Barcode not detected</span>
+                  <span className="font-semibold block mb-2">ID Card Not Detected</span>
                   <div className="text-xs text-white/70 space-y-1">
-                    <p>• The system tried to scan automatically but couldn't detect the barcode</p>
+                    <p>• The system tried to verify automatically but couldn't detect the ID card</p>
                     <p>• Click "Scan Again" button to retry</p>
-                    <p>• Ensure the barcode is clearly visible, well-lit, and in focus</p>
-                    <p>• Make sure the barcode is not blurred, damaged, or covered</p>
+                    <p>• Ensure the ID card is clearly visible, well-lit, and in focus</p>
+                    <p>• Make sure the ID card is not blurred, damaged, or covered</p>
                     <p>• Try uploading a higher resolution image</p>
                     {scanAttempts > 0 && (
                       <p className="mt-2 text-warning font-semibold">
@@ -793,21 +793,21 @@ export const IDCardScanner = ({ onVerified, onCancel }: IDCardScannerProps) => {
                     ⚠️ Multiple scan attempts failed
                   </p>
                   <p className="text-xs text-white/70 mb-2">
-                    The barcode scanner tried multiple methods but couldn't detect the barcode. 
+                    The system tried multiple methods but couldn't verify the ID card. 
                     This could be due to:
                   </p>
                   <ul className="text-xs text-white/70 list-disc list-inside space-y-1">
-                    <li>Barcode format not supported (supported: QR codes, Code 128, Code 39, EAN, UPC)</li>
-                    <li><strong>Full ID card image not provided</strong> - cropped barcode images are rejected for security</li>
-                    <li>Image quality too low or barcode too small in the full image</li>
-                    <li>Barcode damaged, partially obscured, or not clearly visible</li>
+                    <li>ID card format not recognized</li>
+                    <li><strong>Full ID card image not provided</strong> - cropped images are rejected for security</li>
+                    <li>Image quality too low or ID card too small in the image</li>
+                    <li>ID card damaged, partially obscured, or not clearly visible</li>
                     <li>Lighting, glare, or contrast issues</li>
                   </ul>
                   <p className="text-xs text-red-200 font-semibold mt-2">
-                    ⚠️ Security: Only full ID card images are accepted. Cropped barcode images are rejected to prevent fake barcodes.
+                    ⚠️ Security: Only full ID card images are accepted. Cropped images are rejected for security.
                   </p>
                   <p className="text-xs text-white/70 mt-1">
-                    Please upload a new, clear image of your complete ID card showing all details including the barcode.
+                    Please upload a new, clear image of your complete ID card showing all details.
                   </p>
                 </div>
               )}
@@ -820,17 +820,17 @@ export const IDCardScanner = ({ onVerified, onCancel }: IDCardScannerProps) => {
               📸 Important: Upload Full ID Card Image
             </p>
             <ul className="text-xs text-white/70 space-y-1 list-disc list-inside mb-2">
-              <li><strong>Upload the complete ID card</strong> - not just a cropped barcode image</li>
-              <li>This ensures the barcode belongs to a real ID card</li>
-              <li>The system scans different regions of the image to find the barcode</li>
-              <li>OCR verifies the barcode matches text on the ID card</li>
+              <li><strong>Upload the complete ID card</strong> - not just a cropped image</li>
+              <li>This ensures the ID card is authentic</li>
+              <li>The system scans different regions of the image to verify the ID card</li>
+              <li>OCR verifies the ID card details</li>
             </ul>
             <p className="text-xs text-blue-200 font-semibold mb-1 mt-2">
               📸 Tips for better scanning:
             </p>
             <ul className="text-xs text-white/70 space-y-1 list-disc list-inside">
               <li>Ensure good lighting and the full ID card is visible</li>
-              <li>Make sure the barcode is clearly visible and not blurred</li>
+              <li>Make sure the ID card is clearly visible and not blurred</li>
               <li>Avoid shadows, glare, or reflections</li>
               <li>Keep the ID card flat and in focus</li>
               <li>Use a high-resolution image for best results</li>
