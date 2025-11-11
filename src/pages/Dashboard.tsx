@@ -449,7 +449,7 @@ const Dashboard = () => {
                   <div className="space-y-4">
                     {recentActivity.map((activity, index) => (
                       <div key={index} className="flex items-center gap-4">
-                        <div className="w-2 h-2 rounded-full bg-primary"></div>
+                        <div className="w-2 h-2 rounded-full bg-white"></div>
                         <div className="flex-1">
                           <p className="text-white">{activity.action}</p>
                           <p className="text-sm text-white/50">{activity.time}</p>
@@ -569,7 +569,7 @@ const Dashboard = () => {
                             Voted on {vote.date}
                           </CardDescription>
                         </div>
-                        <Badge className="bg-primary text-white">Completed</Badge>
+                        <Badge className="bg-white/20 text-white border border-white/30">Completed</Badge>
                       </div>
                     </CardHeader>
                     <CardContent>

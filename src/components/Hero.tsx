@@ -144,23 +144,38 @@ export const Hero = ({
             Transparent, Secure, and Easy voting for educational institutions
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
-            <Button
-              size="lg"
-              className="bg-primary hover:bg-primary/90 text-primary-foreground text-lg px-8 py-6 hover-glow"
-              onClick={onRegister}
+          <motion.div 
+            className="flex flex-col sm:flex-row gap-4 justify-center mb-16"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.4 }}
+          >
+            <motion.div
+              whileHover={{ scale: 1.05, y: -2 }}
+              whileTap={{ scale: 0.95 }}
             >
-              Register Now
-            </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              className="border-2 border-white/30 text-white hover:bg-white/10 text-lg px-8 py-6 backdrop-blur-sm"
-              onClick={onAuthOpen}
+              <Button
+                size="lg"
+                className="bg-white text-black hover:bg-white/90 text-lg px-8 py-6 shadow-2xl hover:shadow-white/20 transition-all duration-300"
+                onClick={onRegister}
+              >
+                Register Now
+              </Button>
+            </motion.div>
+            <motion.div
+              whileHover={{ scale: 1.05, y: -2 }}
+              whileTap={{ scale: 0.95 }}
             >
-              Sign In
-            </Button>
-          </div>
+              <Button
+                size="lg"
+                variant="outline"
+                className="border-2 border-white/40 text-white hover:bg-white/20 hover:border-white/60 text-lg px-8 py-6 backdrop-blur-sm transition-all duration-300"
+                onClick={onAuthOpen}
+              >
+                Sign In
+              </Button>
+            </motion.div>
+          </motion.div>
 
           {/* Stats Counter */}
           <motion.div

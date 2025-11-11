@@ -453,7 +453,7 @@ const Admin = () => {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <Loader2 className="w-8 h-8 animate-spin text-white" />
       </div>
     );
   }
@@ -555,7 +555,7 @@ const Admin = () => {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-3xl font-bold text-primary mb-1">
+                    <div className="text-3xl font-bold text-white mb-1">
                       {stats.totalUsers.toLocaleString()}
                     </div>
                     <p className="text-sm text-white/50">Registered users</p>
@@ -694,7 +694,7 @@ const Admin = () => {
               <div className="flex items-center justify-between">
                 <h1 className="text-4xl font-bold text-white">Manage Votes</h1>
                 <Button 
-                  className="bg-primary hover:bg-primary/90"
+                  className="bg-white text-black hover:bg-white/90 shadow-lg hover:shadow-xl transition-all duration-300"
                   onClick={() => setShowCreateVoteForm(true)}
                 >
                   <Plus className="w-4 h-4 mr-2" />
@@ -1086,7 +1086,7 @@ const Admin = () => {
                                 <Badge className="ml-2 bg-error text-white">Blocked</Badge>
                               )}
                               {user.role !== 'user' && (
-                                <Badge className="ml-2 bg-primary text-white">{user.role}</Badge>
+                                <Badge className="ml-2 bg-white/20 text-white border border-white/30">{user.role}</Badge>
                               )}
                             </TableCell>
                             <TableCell className="text-white/70">{user.totalVotes}</TableCell>
