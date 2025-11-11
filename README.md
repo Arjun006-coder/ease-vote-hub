@@ -339,13 +339,45 @@ This project is licensed under the MIT License.
 3. Make your changes
 4. Submit a pull request
 
+## 🚀 Deployment
+
+### Deploy to Vercel (Recommended)
+
+Vercel can host both your frontend and backend API routes.
+
+1. **Push to GitHub** (if not already done):
+   ```bash
+   git push origin main
+   ```
+
+2. **Deploy to Vercel**:
+   - Go to [Vercel Dashboard](https://vercel.com/dashboard)
+   - Click "Add New Project"
+   - Import your GitHub repository
+   - Vercel will auto-detect Vite framework
+
+3. **Set Environment Variables** in Vercel:
+   - `VITE_SUPABASE_URL` - Your Supabase project URL
+   - `VITE_SUPABASE_ANON_KEY` - Supabase anonymous key
+   - `SUPABASE_SERVICE_KEY` - Supabase service role key
+   - `GMAIL_USER` - Your Gmail address
+   - `GMAIL_APP_PASSWORD` - 16-character Gmail App Password
+
+4. **Deploy**:
+   - Click "Deploy"
+   - Your app will be live at `https://your-project.vercel.app`
+
+**Note**: The backend API routes are in the `/api` directory and work as Vercel serverless functions. No separate backend deployment needed!
+
+For detailed deployment instructions, see [DEPLOYMENT.md](./DEPLOYMENT.md)
+
 ## 📞 Support
 
 For issues and questions:
 - Check the Troubleshooting section above
 - Review the SQL files for database setup
 - Check browser console for errors
-- Check backend server logs
+- Check Vercel function logs (for API routes)
 
 ## 🎯 Roadmap
 

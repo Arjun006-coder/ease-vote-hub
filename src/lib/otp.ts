@@ -43,8 +43,12 @@ export const sendOTP = async (identifier: string, otpType: 'email'): Promise<{ e
       return { error };
     }
 
-    // Call backend API to send email OTP via Resend
-    const apiUrl = import.meta.env.VITE_API_URL || '';
+    // Call backend API to send email OTP
+    // In production (Vercel), API routes are served from the same domain
+    // In development, use VITE_API_URL if set, otherwise use same origin
+    const apiUrl = import.meta.env.PROD 
+      ? '' // Production: use same origin (Vercel API routes)
+      : (import.meta.env.VITE_API_URL || ''); // Development: use VITE_API_URL or same origin
     const endpoint = '/api/send-otp-email';
     
     try {
