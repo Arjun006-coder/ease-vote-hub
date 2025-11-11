@@ -202,23 +202,24 @@ const Dashboard = () => {
                   );
                   
                   if (winnerOptionId && maxVotes > 0) {
-                  // Fetch winner option text
-                  const { data: winnerOption } = await supabase
-                    .from('voting_options')
-                    .select('option_text')
-                    .eq('id', winnerOptionId)
-                    .single();
-                  
-                  if (winnerOption) {
-                    // Check for ties
-                    const winnersCount = Object.values(voteCounts).filter(
-                      count => count === maxVotes
-                    ).length;
+                    // Fetch winner option text
+                    const { data: winnerOption } = await supabase
+                      .from('voting_options')
+                      .select('option_text')
+                      .eq('id', winnerOptionId)
+                      .single();
                     
-                    if (winnersCount > 1) {
-                      winner = 'Tie';
-                    } else {
-                      winner = winnerOption.option_text;
+                    if (winnerOption) {
+                      // Check for ties
+                      const winnersCount = Object.values(voteCounts).filter(
+                        count => count === maxVotes
+                      ).length;
+                      
+                      if (winnersCount > 1) {
+                        winner = 'Tie';
+                      } else {
+                        winner = winnerOption.option_text;
+                      }
                     }
                   }
                 }
