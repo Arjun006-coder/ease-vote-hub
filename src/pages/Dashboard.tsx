@@ -202,24 +202,23 @@ const Dashboard = () => {
                   );
                   
                   if (winnerOptionId && maxVotes > 0) {
-                    // Fetch winner option text
-                    const { data: winnerOption } = await supabase
-                      .from('voting_options')
-                      .select('option_text')
-                      .eq('id', winnerOptionId)
-                      .single();
+                  // Fetch winner option text
+                  const { data: winnerOption } = await supabase
+                    .from('voting_options')
+                    .select('option_text')
+                    .eq('id', winnerOptionId)
+                    .single();
+                  
+                  if (winnerOption) {
+                    // Check for ties
+                    const winnersCount = Object.values(voteCounts).filter(
+                      count => count === maxVotes
+                    ).length;
                     
-                    if (winnerOption) {
-                      // Check for ties
-                      const winnersCount = Object.values(voteCounts).filter(
-                        count => count === maxVotes
-                      ).length;
-                      
-                      if (winnersCount > 1) {
-                        winner = 'Tie';
-                      } else {
-                        winner = winnerOption.option_text;
-                      }
+                    if (winnersCount > 1) {
+                      winner = 'Tie';
+                    } else {
+                      winner = winnerOption.option_text;
                     }
                   }
                 }
@@ -347,39 +346,23 @@ const Dashboard = () => {
               {/* Stats */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                 {stats.map((stat, index) => (
-                  <motion.div
-                    key={index}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5, delay: index * 0.1 }}
-                  >
-                    <Card className="glass-card border-white/20 hover-scale">
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium text-white/70">
-                          {stat.label}
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <motion.div 
-                          className={`text-3xl font-bold ${stat.color}`}
-                          initial={{ scale: 0 }}
-                          animate={{ scale: 1 }}
-                          transition={{ duration: 0.3, delay: index * 0.1 + 0.2 }}
-                        >
-                          {stat.value}
-                        </motion.div>
-                      </CardContent>
-                    </Card>
-                  </motion.div>
+                  <Card key={index} className="glass-card border-white/20">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium text-white/70">
+                        {stat.label}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className={`text-3xl font-bold ${stat.color}`}>
+                        {stat.value}
+                      </div>
+                    </CardContent>
+                  </Card>
                 ))}
               </div>
 
               {/* Active Voting Sessions */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.4 }}
-              >
+              <div>
                 <h2 className="text-2xl font-bold text-white mb-4">
                   Active Voting Sessions
                 </h2>
@@ -389,67 +372,60 @@ const Dashboard = () => {
                   ) : votingSessions.length === 0 ? (
                     <p className="text-white/70">No active voting sessions</p>
                   ) : (
-                    votingSessions.slice(0, 2).map((vote, index) => (
-                    <motion.div
+                    votingSessions.slice(0, 2).map((vote) => (
+                    <Card
                       key={vote.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.5, delay: 0.5 + index * 0.1 }}
-                      whileHover={{ y: -4 }}
+                      className="glass-card border-white/20 hover-scale hover-glow cursor-pointer"
+                      onClick={() => {
+                        // If vote is ended, go to results page; otherwise go to vote page
+                        if (vote.status === 'ended') {
+                          navigate(`/results/${vote.id}`);
+                        } else {
+                          navigate(`/vote/${vote.id}`);
+                        }
+                      }}
                     >
-                      <Card
-                        className="glass-card border-white/20 hover-scale hover-glow cursor-pointer"
-                        onClick={() => {
-                          // If vote is ended, go to results page; otherwise go to vote page
-                          if (vote.status === 'ended') {
-                            navigate(`/results/${vote.id}`);
-                          } else {
-                            navigate(`/vote/${vote.id}`);
-                          }
-                        }}
-                      >
-                        <CardHeader>
-                          <div className="flex items-start justify-between">
-                            <div>
-                              <CardTitle className="text-white">{vote.title}</CardTitle>
-                              <CardDescription className="text-white/70 mt-2">
-                                {vote.description || "No description"}
-                              </CardDescription>
+                      <CardHeader>
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <CardTitle className="text-white">{vote.title}</CardTitle>
+                            <CardDescription className="text-white/70 mt-2">
+                              {vote.description || "No description"}
+                            </CardDescription>
+                          </div>
+                          <Badge className="bg-success text-white">{vote.status}</Badge>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-3">
+                          {vote.scheduled_end && (
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-white/70">Ends:</span>
+                              <span className="text-warning font-semibold">
+                                {new Date(vote.scheduled_end).toLocaleDateString()}
+                              </span>
                             </div>
-                            <Badge className="bg-success text-white">{vote.status}</Badge>
-                          </div>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="space-y-3">
-                            {vote.scheduled_end && (
-                              <div className="flex items-center justify-between text-sm">
-                                <span className="text-white/70">Ends:</span>
-                                <span className="text-warning font-semibold">
-                                  {new Date(vote.scheduled_end).toLocaleDateString()}
-                                </span>
-                              </div>
-                            )}
-                            {vote.criteria && (
-                              <div className="flex flex-wrap gap-2">
-                                {Object.entries(vote.criteria).map(([key, value]: [string, any]) => (
-                                  <Badge
-                                    key={key}
-                                    variant="outline"
-                                    className="border-white/30 text-white/90"
-                                  >
-                                    {key}: {Array.isArray(value) ? value.join(", ") : value}
-                                  </Badge>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </motion.div>
-                    ))
-                  )}
+                          )}
+                          {vote.criteria && (
+                            <div className="flex flex-wrap gap-2">
+                              {Object.entries(vote.criteria).map(([key, value]: [string, any]) => (
+                                <Badge
+                                  key={key}
+                                  variant="outline"
+                                  className="border-white/30 text-white/90"
+                                >
+                                  {key}: {Array.isArray(value) ? value.join(", ") : value}
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                    )
+                  ))}
                 </div>
-              </motion.div>
+              </div>
 
               {/* Recent Activity */}
               <Card className="glass-card border-white/20">
@@ -460,7 +436,7 @@ const Dashboard = () => {
                   <div className="space-y-4">
                     {recentActivity.map((activity, index) => (
                       <div key={index} className="flex items-center gap-4">
-                        <div className="w-2 h-2 rounded-full bg-white"></div>
+                        <div className="w-2 h-2 rounded-full bg-primary"></div>
                         <div className="flex-1">
                           <p className="text-white">{activity.action}</p>
                           <p className="text-sm text-white/50">{activity.time}</p>
@@ -580,7 +556,7 @@ const Dashboard = () => {
                             Voted on {vote.date}
                           </CardDescription>
                         </div>
-                        <Badge className="bg-white/20 text-white border border-white/30">Completed</Badge>
+                        <Badge className="bg-primary text-white">Completed</Badge>
                       </div>
                     </CardHeader>
                     <CardContent>

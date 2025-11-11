@@ -346,43 +346,13 @@ const Register = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-background via-background to-background/80 relative overflow-hidden">
-      {/* Background animated elements */}
-      <div className="absolute inset-0 pointer-events-none">
-        {[...Array(5)].map((_, i) => (
-          <motion.div
-            key={i}
-            className="absolute rounded-full border border-white/5"
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ 
-              scale: [1, 1.3, 1],
-              opacity: [0.1, 0.05, 0.1],
-              x: [0, 50, 0],
-              y: [0, 30, 0]
-            }}
-            transition={{
-              duration: 8 + i * 2,
-              repeat: Infinity,
-              ease: "easeInOut",
-              delay: i * 1.5,
-            }}
-            style={{
-              width: `${200 + i * 100}px`,
-              height: `${200 + i * 100}px`,
-              left: `${10 + i * 20}%`,
-              top: `${10 + i * 15}%`,
-            }}
-          />
-        ))}
-      </div>
-      
+    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-background via-background to-background/80">
       <motion.div
-        initial={{ opacity: 0, y: 20, scale: 0.95 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ duration: 0.6, type: "spring", stiffness: 100 }}
-        className="w-full max-w-2xl relative z-10"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="w-full max-w-2xl"
       >
-        <Card className="glass-card border-white/20 shadow-2xl">
+        <Card className="glass-card border-white/20">
           <CardHeader>
             <CardTitle className="text-3xl font-bold text-white flex items-center gap-2">
               <User className="w-8 h-8" />

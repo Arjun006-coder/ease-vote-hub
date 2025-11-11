@@ -116,18 +116,13 @@ export const AuthModal = ({ open, onOpenChange }: AuthModalProps) => {
                     />
                   </div>
                 </div>
-                <motion.div
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
+                <Button 
+                  type="submit" 
+                  className="w-full bg-primary hover:bg-primary/90"
+                  disabled={loading}
                 >
-                  <Button 
-                    type="submit" 
-                    className="w-full bg-white text-black hover:bg-white/90 shadow-lg hover:shadow-xl transition-all duration-300"
-                    disabled={loading}
-                  >
-                    {loading ? "Signing in..." : "Sign In"}
-                  </Button>
-                </motion.div>
+                  {loading ? "Signing in..." : "Sign In"}
+                </Button>
                 <div className="text-center mt-4">
                   <p className="text-sm text-white/70">
                     Don't have an account?{' '}

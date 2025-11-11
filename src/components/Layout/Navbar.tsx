@@ -30,23 +30,15 @@ export const Navbar = () => {
   };
 
   return (
-    <nav className="glass-card border-b border-white/20 px-6 py-4 sticky top-0 z-50 backdrop-blur-xl">
+    <nav className="glass-card border-b border-white/20 px-6 py-4 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto flex items-center justify-between">
-        <motion.div
+        <div
           className="flex items-center gap-2 cursor-pointer"
           onClick={handleLogoClick}
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          transition={{ duration: 0.2 }}
         >
-          <motion.div
-            animate={{ rotate: [0, 10, -10, 0] }}
-            transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
-          >
-            <Vote className="w-8 h-8 text-white" />
-          </motion.div>
+          <Vote className="w-8 h-8 text-primary" />
           <span className="text-2xl font-bold text-white">VoteEase</span>
-        </motion.div>
+        </div>
 
         {/* Only show user menu if user is logged in */}
         {user && (
