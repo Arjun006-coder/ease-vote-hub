@@ -2,6 +2,8 @@
 
 A modern, secure voting platform for educational institutions with ID card verification, email OTP, GPS location verification, and real-time voting capabilities.
 
+---
+
 ## ✨ Features
 
 - 🔐 **Secure Authentication** - ID card verification with barcode scanning
