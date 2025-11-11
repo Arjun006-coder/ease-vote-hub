@@ -22,11 +22,16 @@ import {
   Upload,
   MapPin,
   CheckCircle,
+  Loader2,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/contexts/AuthContext";
 
 export const CreateVoteForm = ({ onClose }: { onClose: () => void }) => {
   const { toast } = useToast();
+  const { user } = useAuth();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     title: "",
@@ -71,12 +76,173 @@ export const CreateVoteForm = ({ onClose }: { onClose: () => void }) => {
     if (step > 1) setStep(step - 1);
   };
 
-  const handleSubmit = () => {
-    toast({
-      title: "Vote Created Successfully! 🎉",
-      description: "Your voting session has been scheduled",
-    });
-    onClose();
+  const handleSubmit = async () => {
+    if (!user?.id) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to create a vote",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validation
+    if (!formData.title || !formData.description) {
+      toast({
+        title: "Validation Error",
+        description: "Title and description are required",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (formData.options.length < 2) {
+      toast({
+        title: "Validation Error",
+        description: "At least 2 options are required",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!formData.startDate || !formData.startTime || !formData.endDate || !formData.endTime) {
+      toast({
+        title: "Validation Error",
+        description: "Start and end date/time are required",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check if options have names
+    const emptyOptions = formData.options.filter(opt => !opt.name.trim());
+    if (emptyOptions.length > 0) {
+      toast({
+        title: "Validation Error",
+        description: "All options must have a name",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      // Combine date and time for scheduled_start and scheduled_end
+      const scheduledStart = new Date(`${formData.startDate}T${formData.startTime}`);
+      const scheduledEnd = new Date(`${formData.endDate}T${formData.endTime}`);
+
+      // Validate dates
+      if (scheduledStart >= scheduledEnd) {
+        toast({
+          title: "Validation Error",
+          description: "End date/time must be after start date/time",
+          variant: "destructive",
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Prepare criteria
+      const criteria: any = {};
+      if (formData.classes.length > 0) {
+        criteria.class = formData.classes;
+      }
+      if (formData.departments.length > 0) {
+        criteria.department = formData.departments;
+      }
+      if (formData.year) {
+        criteria.year = [parseInt(formData.year)];
+      }
+
+      // Prepare GPS data
+      let centerGps = null;
+      let allowedGpsRadius = null;
+      if (formData.gpsEnabled && formData.gpsCenter) {
+        // For now, just store the center location text
+        // In production, you'd want to geocode this to lat/lng
+        centerGps = { location: formData.gpsCenter };
+        allowedGpsRadius = parseInt(formData.gpsRadius) || 100;
+      }
+
+      // Create voting session
+      console.log('📤 Creating voting session...', {
+        title: formData.title,
+        created_by: user.id,
+        criteria,
+        scheduled_start: scheduledStart.toISOString(),
+        scheduled_end: scheduledEnd.toISOString(),
+      });
+
+      const { data: session, error: sessionError } = await supabase
+        .from('voting_sessions')
+        .insert({
+          title: formData.title,
+          description: formData.description,
+          created_by: user.id,
+          status: 'draft', // Start as draft, admin can activate later
+          criteria: Object.keys(criteria).length > 0 ? criteria : null,
+          scheduled_start: scheduledStart.toISOString(),
+          scheduled_end: scheduledEnd.toISOString(),
+          require_gps: formData.gpsEnabled,
+          center_gps: centerGps,
+          allowed_gps_radius: allowedGpsRadius,
+          allow_multiple_votes: formData.allowChanges,
+          show_live_results: formData.showLiveResults,
+        })
+        .select()
+        .single();
+
+      if (sessionError) {
+        console.error('❌ Error creating session:', sessionError);
+        throw new Error(`Failed to create voting session: ${sessionError.message}`);
+      }
+
+      console.log('✅ Session created:', session);
+
+      // Create voting options
+      const optionsToInsert = formData.options.map((option, index) => ({
+        session_id: session.id,
+        option_text: option.name,
+        option_image_url: option.image || null,
+        option_order: index + 1,
+        additional_data: option.details ? { details: option.details } : null,
+      }));
+
+      console.log('📤 Creating voting options...', optionsToInsert.length, 'options');
+
+      const { error: optionsError, data: insertedOptions } = await supabase
+        .from('voting_options')
+        .insert(optionsToInsert)
+        .select();
+
+      if (optionsError) {
+        console.error('❌ Error creating options:', optionsError);
+        throw new Error(`Failed to create voting options: ${optionsError.message}`);
+      }
+
+      console.log('✅ Options created:', insertedOptions);
+
+      toast({
+        title: "Vote Created Successfully! 🎉",
+        description: "Your voting session has been created as draft. Go to Manage Votes → Draft tab to activate it.",
+        duration: 5000,
+      });
+
+      // Close form after a short delay to show the toast
+      setTimeout(() => {
+        onClose();
+      }, 500);
+    } catch (error: any) {
+      console.error('Error creating vote:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create voting session",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -304,9 +470,29 @@ export const CreateVoteForm = ({ onClose }: { onClose: () => void }) => {
                 </div>
 
                 <div>
+                  <Label className="text-white mb-3 block">Year (Optional)</Label>
+                  <Select
+                    value={formData.year}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, year: value })
+                    }
+                  >
+                    <SelectTrigger className="bg-white/10 border-white/30 text-white">
+                      <SelectValue placeholder="Select year (optional)" />
+                    </SelectTrigger>
+                    <SelectContent className="glass-card border-white/30">
+                      <SelectItem value="1">Year 1</SelectItem>
+                      <SelectItem value="2">Year 2</SelectItem>
+                      <SelectItem value="3">Year 3</SelectItem>
+                      <SelectItem value="4">Year 4</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
                   <Label className="text-white mb-3 block">Departments</Label>
                   <div className="grid grid-cols-2 gap-2">
-                    {["Computer Science", "Mathematics", "Physics", "Chemistry"].map(
+                    {["Computer Science", "Mathematics", "Physics", "Chemistry", "Biology", "English"].map(
                       (dept) => (
                         <div
                           key={dept}
@@ -618,8 +804,16 @@ export const CreateVoteForm = ({ onClose }: { onClose: () => void }) => {
               <Button
                 onClick={handleSubmit}
                 className="bg-success hover:bg-success/90"
+                disabled={isSubmitting}
               >
-                Launch Vote
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  "Create Vote"
+                )}
               </Button>
             )}
           </div>

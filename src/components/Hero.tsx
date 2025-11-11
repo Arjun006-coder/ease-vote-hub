@@ -1,8 +1,58 @@
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Vote, CheckCircle, BarChart3 } from "lucide-react";
+import { Vote, CheckCircle, BarChart3, Loader2 } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 
-export const Hero = ({ onAuthOpen }: { onAuthOpen: () => void }) => {
+export const Hero = ({ 
+  onAuthOpen, 
+  onRegister 
+}: { 
+  onAuthOpen: () => void;
+  onRegister: () => void;
+}) => {
+  const [stats, setStats] = useState({
+    totalVotes: 0,
+    activeSessions: 0,
+    totalUsers: 0,
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchStats();
+  }, []);
+
+  const fetchStats = async () => {
+    try {
+      // Fetch total votes
+      const { count: votesCount } = await supabase
+        .from('votes')
+        .select('*', { count: 'exact', head: true })
+        .eq('is_valid', true);
+
+      // Fetch active sessions
+      const { count: sessionsCount } = await supabase
+        .from('voting_sessions')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'active');
+
+      // Fetch total users
+      const { count: usersCount } = await supabase
+        .from('users')
+        .select('*', { count: 'exact', head: true });
+
+      setStats({
+        totalVotes: votesCount || 0,
+        activeSessions: sessionsCount || 0,
+        totalUsers: usersCount || 0,
+      });
+    } catch (error) {
+      console.error('Error fetching stats:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <section className="relative min-h-screen flex items-center justify-center px-4 py-20 overflow-hidden">
       {/* Floating Vote Icons Background */}
@@ -48,16 +98,17 @@ export const Hero = ({ onAuthOpen }: { onAuthOpen: () => void }) => {
             <Button
               size="lg"
               className="bg-primary hover:bg-primary/90 text-primary-foreground text-lg px-8 py-6 hover-glow"
-              onClick={onAuthOpen}
+              onClick={onRegister}
             >
-              Start Voting
+              Register Now
             </Button>
             <Button
               size="lg"
               variant="outline"
               className="border-2 border-white/30 text-white hover:bg-white/10 text-lg px-8 py-6 backdrop-blur-sm"
+              onClick={onAuthOpen}
             >
-              View Results
+              Sign In
             </Button>
           </div>
 
@@ -72,22 +123,46 @@ export const Hero = ({ onAuthOpen }: { onAuthOpen: () => void }) => {
               <div className="flex items-center justify-center mb-2">
                 <CheckCircle className="w-8 h-8 text-success" />
               </div>
-              <div className="text-3xl font-bold text-white mb-1">10,234</div>
-              <div className="text-sm text-white/70">Total Votes Cast</div>
+              {loading ? (
+                <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto" />
+              ) : (
+                <>
+                  <div className="text-3xl font-bold text-white mb-1">
+                    {stats.totalVotes.toLocaleString()}
+                  </div>
+                  <div className="text-sm text-white/70">Total Votes Cast</div>
+                </>
+              )}
             </div>
             <div className="glass-card p-6 hover-scale">
               <div className="flex items-center justify-center mb-2">
                 <Vote className="w-8 h-8 text-primary" />
               </div>
-              <div className="text-3xl font-bold text-white mb-1">47</div>
-              <div className="text-sm text-white/70">Active Sessions</div>
+              {loading ? (
+                <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto" />
+              ) : (
+                <>
+                  <div className="text-3xl font-bold text-white mb-1">
+                    {stats.activeSessions}
+                  </div>
+                  <div className="text-sm text-white/70">Active Sessions</div>
+                </>
+              )}
             </div>
             <div className="glass-card p-6 hover-scale">
               <div className="flex items-center justify-center mb-2">
                 <BarChart3 className="w-8 h-8 text-warning" />
               </div>
-              <div className="text-3xl font-bold text-white mb-1">2,891</div>
-              <div className="text-sm text-white/70">Total Users</div>
+              {loading ? (
+                <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto" />
+              ) : (
+                <>
+                  <div className="text-3xl font-bold text-white mb-1">
+                    {stats.totalUsers.toLocaleString()}
+                  </div>
+                  <div className="text-sm text-white/70">Total Users</div>
+                </>
+              )}
             </div>
           </motion.div>
         </motion.div>

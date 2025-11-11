@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Navbar } from "@/components/Layout/Navbar";
 import { Home, Vote, History, User, LogOut, Search, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -7,73 +7,210 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { motion } from "framer-motion";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/lib/supabase";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const [activeView, setActiveView] = useState("dashboard");
+  const [searchParams] = useSearchParams();
+  const { user, userProfile, signOut, refreshProfile } = useAuth();
+  const { toast } = useToast();
+  const viewParam = searchParams.get("view") || "dashboard";
+  const [activeView, setActiveView] = useState(viewParam);
+  const [votingSessions, setVotingSessions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [statsData, setStatsData] = useState({ votesToday: 0, totalVotes: 0 });
+  const [voteHistory, setVoteHistory] = useState<any[]>([]);
+  const [recentActivity, setRecentActivity] = useState<any[]>([]);
+  const [profileData, setProfileData] = useState({
+    full_name: "",
+    email: "",
+    phone: "",
+    department: "",
+    user_type: "",
+    year: "",
+    section: "",
+    club: "",
+  });
+
+  useEffect(() => {
+    if (userProfile) {
+      setProfileData({
+        full_name: userProfile.full_name || "",
+        email: userProfile.email || "",
+        phone: userProfile.phone || "",
+        department: userProfile.department || "",
+        user_type: userProfile.user_type || "",
+        year: userProfile.year?.toString() || "",
+        section: userProfile.section || "",
+        club: userProfile.club || "",
+      });
+    }
+  }, [userProfile]);
+
+  useEffect(() => {
+    fetchVotingSessions();
+  }, []);
+
+  useEffect(() => {
+    const view = searchParams.get("view") || "dashboard";
+    setActiveView(view);
+  }, [searchParams]);
+
+  const fetchVotingSessions = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('voting_sessions')
+        .select('*')
+        .in('status', ['active', 'ended'])
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setVotingSessions(data || []);
+    } catch (error) {
+      console.error('Error fetching voting sessions:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    await signOut();
+    navigate("/");
+  };
+
+  // Helper function to calculate time ago
+  const getTimeAgo = (date: Date): string => {
+    const now = new Date();
+    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+    
+    if (diffInSeconds < 60) return `${diffInSeconds} seconds ago`;
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} minutes ago`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hours ago`;
+    return `${Math.floor(diffInSeconds / 86400)} days ago`;
+  };
+
+  // Fetch user stats
+  useEffect(() => {
+    const fetchStats = async () => {
+      if (!user?.id) return;
+
+      try {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        // Get votes cast today
+        const { data: votesToday, error: todayError } = await supabase
+          .from('votes')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('is_valid', true)
+          .gte('voted_at', today.toISOString());
+
+        // Get total votes
+        const { data: totalVotes, error: totalError } = await supabase
+          .from('votes')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('is_valid', true);
+
+        if (!todayError && !totalError) {
+          setStatsData({
+            votesToday: votesToday?.length || 0,
+            totalVotes: totalVotes?.length || 0,
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching stats:', error);
+      }
+    };
+
+    if (user) {
+      fetchStats();
+    }
+  }, [user]);
+
+  // Fetch user's vote history from database
+  useEffect(() => {
+    const fetchVoteHistory = async () => {
+      if (!user?.id) return;
+
+      try {
+        // Fetch votes cast by this user
+        const { data: votes, error: votesError } = await supabase
+          .from('votes')
+          .select(`
+            id,
+            voted_at,
+            session_id,
+            option_id,
+            voting_sessions (
+              id,
+              title,
+              status,
+              actual_end
+            ),
+            voting_options (
+              id,
+              option_text
+            )
+          `)
+          .eq('user_id', user.id)
+          .eq('is_valid', true)
+          .order('voted_at', { ascending: false })
+          .limit(10);
+
+        if (votesError) throw votesError;
+
+        // Transform votes into vote history format
+        const history = (votes || []).map((vote: any) => {
+          const session = vote.voting_sessions;
+          const option = vote.voting_options;
+          
+          return {
+            id: vote.id,
+            title: session?.title || 'Unknown Session',
+            date: new Date(vote.voted_at).toLocaleDateString(),
+            selected: option?.option_text || 'Unknown Option',
+            sessionId: vote.session_id,
+            votedAt: vote.voted_at,
+          };
+        });
+
+        setVoteHistory(history);
+
+        // Create recent activity from votes
+        const activity = (votes || []).slice(0, 5).map((vote: any) => {
+          const session = vote.voting_sessions;
+          const timeAgo = getTimeAgo(new Date(vote.voted_at));
+          return {
+            action: `Voted in ${session?.title || 'election'}`,
+            time: timeAgo,
+          };
+        });
+
+        setRecentActivity(activity);
+      } catch (error) {
+        console.error('Error fetching vote history:', error);
+        // Set empty arrays on error
+        setVoteHistory([]);
+        setRecentActivity([]);
+      }
+    };
+
+    if (user) {
+      fetchVoteHistory();
+    }
+  }, [user]);
 
   const stats = [
-    { label: "Votes Cast Today", value: "3", color: "text-success" },
-    { label: "Active Sessions", value: "12", color: "text-primary" },
-    { label: "Vote History", value: "47", color: "text-warning" },
-    { label: "Pending Verifications", value: "0", color: "text-muted-foreground" },
-  ];
-
-  const activeVotes = [
-    {
-      id: 1,
-      title: "Class Representative Election 2025",
-      description: "Vote for your class representative for the academic year",
-      timeRemaining: "2h 34m",
-      eligible: true,
-      participants: 234,
-      criteria: ["Class 10A", "CS Department"],
-    },
-    {
-      id: 2,
-      title: "Best Teacher Award",
-      description: "Vote for the most inspiring teacher of the semester",
-      timeRemaining: "5h 12m",
-      eligible: true,
-      participants: 567,
-      criteria: ["All Students"],
-    },
-    {
-      id: 3,
-      title: "Club President Selection",
-      description: "Choose the next president for the Computer Science Club",
-      timeRemaining: "1d 4h",
-      eligible: false,
-      participants: 89,
-      criteria: ["CS Department", "Year 2-4"],
-      ineligibleReason: "Not enrolled in CS Department",
-    },
-  ];
-
-  const voteHistory = [
-    {
-      id: 1,
-      title: "Student Union President",
-      date: "2025-01-05",
-      selected: "Sarah Johnson",
-      winner: "Sarah Johnson",
-      totalVotes: 892,
-    },
-    {
-      id: 2,
-      title: "Sports Captain",
-      date: "2024-12-20",
-      selected: "Mike Chen",
-      winner: "Mike Chen",
-      totalVotes: 456,
-    },
-  ];
-
-  const recentActivity = [
-    { action: "Voted in Class Rep Election", time: "2 hours ago" },
-    { action: "Profile verified", time: "1 day ago" },
-    { action: "Voted in Best Teacher Award", time: "3 days ago" },
+    { label: "Votes Cast Today", value: statsData?.votesToday?.toString() || "0", color: "text-success" },
+    { label: "Active Sessions", value: loading ? "..." : votingSessions.length.toString(), color: "text-primary" },
+    { label: "Vote History", value: statsData?.totalVotes?.toString() || "0", color: "text-warning" },
+    { label: "Pending Verifications", value: userProfile?.id_card_verified && userProfile?.email_verified ? "0" : "1", color: "text-muted-foreground" },
   ];
 
   return (
@@ -120,7 +257,7 @@ const Dashboard = () => {
               <Button
                 variant="ghost"
                 className="w-full justify-start text-white hover:bg-white/10"
-                onClick={() => navigate("/")}
+                onClick={handleLogout}
               >
                 <LogOut className="w-4 h-4 mr-2" />
                 Logout
@@ -139,7 +276,7 @@ const Dashboard = () => {
             >
               <div>
                 <h1 className="text-4xl font-bold text-white mb-2">
-                  Welcome back, John! 👋
+                  Welcome back, {userProfile?.full_name || "User"}! 👋
                 </h1>
                 <p className="text-white/70">Here's your voting overview</p>
               </div>
@@ -168,55 +305,62 @@ const Dashboard = () => {
                   Active Voting Sessions
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {activeVotes.slice(0, 2).map((vote) => (
+                  {loading ? (
+                    <p className="text-white/70">Loading...</p>
+                  ) : votingSessions.length === 0 ? (
+                    <p className="text-white/70">No active voting sessions</p>
+                  ) : (
+                    votingSessions.slice(0, 2).map((vote) => (
                     <Card
                       key={vote.id}
                       className="glass-card border-white/20 hover-scale hover-glow cursor-pointer"
-                      onClick={() => navigate(`/vote/${vote.id}`)}
+                      onClick={() => {
+                        // If vote is ended, go to results page; otherwise go to vote page
+                        if (vote.status === 'ended') {
+                          navigate(`/results/${vote.id}`);
+                        } else {
+                          navigate(`/vote/${vote.id}`);
+                        }
+                      }}
                     >
                       <CardHeader>
                         <div className="flex items-start justify-between">
                           <div>
                             <CardTitle className="text-white">{vote.title}</CardTitle>
                             <CardDescription className="text-white/70 mt-2">
-                              {vote.description}
+                              {vote.description || "No description"}
                             </CardDescription>
                           </div>
-                          {vote.eligible ? (
-                            <Badge className="bg-success text-white">Eligible</Badge>
-                          ) : (
-                            <Badge variant="destructive">Not Eligible</Badge>
-                          )}
+                          <Badge className="bg-success text-white">{vote.status}</Badge>
                         </div>
                       </CardHeader>
                       <CardContent>
                         <div className="space-y-3">
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="text-white/70">Time Remaining:</span>
-                            <span className="text-warning font-semibold">
-                              {vote.timeRemaining}
-                            </span>
-                          </div>
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="text-white/70">Participants:</span>
-                            <span className="text-white font-semibold">
-                              {vote.participants}
-                            </span>
-                          </div>
-                          <div className="flex flex-wrap gap-2">
-                            {vote.criteria.map((tag, index) => (
-                              <Badge
-                                key={index}
-                                variant="outline"
-                                className="border-white/30 text-white/90"
-                              >
-                                {tag}
-                              </Badge>
-                            ))}
-                          </div>
+                          {vote.scheduled_end && (
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-white/70">Ends:</span>
+                              <span className="text-warning font-semibold">
+                                {new Date(vote.scheduled_end).toLocaleDateString()}
+                              </span>
+                            </div>
+                          )}
+                          {vote.criteria && (
+                            <div className="flex flex-wrap gap-2">
+                              {Object.entries(vote.criteria).map(([key, value]: [string, any]) => (
+                                <Badge
+                                  key={key}
+                                  variant="outline"
+                                  className="border-white/30 text-white/90"
+                                >
+                                  {key}: {Array.isArray(value) ? value.join(", ") : value}
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       </CardContent>
                     </Card>
+                    )
                   ))}
                 </div>
               </div>
@@ -267,66 +411,66 @@ const Dashboard = () => {
               </div>
 
               <div className="space-y-4">
-                {activeVotes.map((vote) => (
-                  <Card
-                    key={vote.id}
-                    className="glass-card border-white/20 hover-scale cursor-pointer"
-                    onClick={() => navigate(`/vote/${vote.id}`)}
-                  >
-                    <CardHeader>
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <CardTitle className="text-white mb-2">{vote.title}</CardTitle>
-                          <CardDescription className="text-white/70">
-                            {vote.description}
-                          </CardDescription>
-                        </div>
-                        {vote.eligible ? (
-                          <Badge className="bg-success text-white ml-4">✓ Eligible</Badge>
-                        ) : (
-                          <Badge variant="destructive" className="ml-4">✗ Not Eligible</Badge>
-                        )}
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div>
-                          <p className="text-sm text-white/70 mb-1">Time Remaining</p>
-                          <p className="text-warning font-semibold text-lg">
-                            {vote.timeRemaining}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-white/70 mb-1">Participants</p>
-                          <p className="text-white font-semibold text-lg">
-                            {vote.participants}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-white/70 mb-1">Criteria</p>
-                          <div className="flex flex-wrap gap-2">
-                            {vote.criteria.map((tag, index) => (
-                              <Badge
-                                key={index}
-                                variant="outline"
-                                className="border-white/30 text-white/90 text-xs"
-                              >
-                                {tag}
-                              </Badge>
-                            ))}
+                {loading ? (
+                  <p className="text-white/70">Loading...</p>
+                ) : votingSessions.length === 0 ? (
+                  <p className="text-white/70">No active voting sessions</p>
+                ) : (
+                  votingSessions.map((vote) => (
+                    <Card
+                      key={vote.id}
+                      className="glass-card border-white/20 hover-scale cursor-pointer"
+                      onClick={() => {
+                        // If vote is ended, go to results page; otherwise go to vote page
+                        if (vote.status === 'ended') {
+                          navigate(`/results/${vote.id}`);
+                        } else {
+                          navigate(`/vote/${vote.id}`);
+                        }
+                      }}
+                    >
+                      <CardHeader>
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <CardTitle className="text-white mb-2">{vote.title}</CardTitle>
+                            <CardDescription className="text-white/70">
+                              {vote.description || "No description"}
+                            </CardDescription>
                           </div>
+                          <Badge className="bg-success text-white ml-4">{vote.status}</Badge>
                         </div>
-                      </div>
-                      {!vote.eligible && vote.ineligibleReason && (
-                        <div className="mt-4 p-3 rounded-lg bg-destructive/20 border border-destructive/30">
-                          <p className="text-sm text-white/90">
-                            <strong>Reason:</strong> {vote.ineligibleReason}
-                          </p>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          {vote.scheduled_end && (
+                            <div>
+                              <p className="text-sm text-white/70 mb-1">Ends</p>
+                              <p className="text-warning font-semibold text-lg">
+                                {new Date(vote.scheduled_end).toLocaleDateString()}
+                              </p>
+                            </div>
+                          )}
+                          {vote.criteria && (
+                            <div>
+                              <p className="text-sm text-white/70 mb-1">Criteria</p>
+                              <div className="flex flex-wrap gap-2">
+                                {Object.entries(vote.criteria).map(([key, value]: [string, any]) => (
+                                  <Badge
+                                    key={key}
+                                    variant="outline"
+                                    className="border-white/30 text-white/90 text-xs"
+                                  >
+                                    {key}: {Array.isArray(value) ? value.join(", ") : value}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                ))}
+                      </CardContent>
+                    </Card>
+                  ))
+                )}
               </div>
             </motion.div>
           )}
@@ -403,12 +547,18 @@ const Dashboard = () => {
                     <Avatar className="w-20 h-20">
                       <AvatarImage src="" />
                       <AvatarFallback className="bg-primary text-white text-2xl">
-                        JD
+                        {userProfile?.full_name
+                          ?.split(" ")
+                          .map((n) => n[0])
+                          .join("")
+                          .toUpperCase() || "U"}
                       </AvatarFallback>
                     </Avatar>
                     <div>
-                      <p className="text-white font-semibold text-xl">John Doe</p>
-                      <p className="text-white/70">john.doe@university.edu</p>
+                      <p className="text-white font-semibold text-xl">
+                        {userProfile?.full_name || "User"}
+                      </p>
+                      <p className="text-white/70">{userProfile?.email || ""}</p>
                     </div>
                   </div>
 
@@ -416,34 +566,107 @@ const Dashboard = () => {
                     <div>
                       <Label className="text-white/70 text-sm">Full Name</Label>
                       <Input
-                        defaultValue="John Doe"
+                        value={profileData.full_name}
+                        onChange={(e) =>
+                          setProfileData({ ...profileData, full_name: e.target.value })
+                        }
                         className="mt-1 bg-white/10 border-white/30 text-white"
                       />
                     </div>
                     <div>
                       <Label className="text-white/70 text-sm">Email</Label>
                       <Input
-                        defaultValue="john.doe@university.edu"
-                        className="mt-1 bg-white/10 border-white/30 text-white"
+                        value={profileData.email}
+                        disabled
+                        className="mt-1 bg-white/5 border-white/20 text-white/50"
                       />
                     </div>
                     <div>
                       <Label className="text-white/70 text-sm">Phone</Label>
                       <Input
-                        defaultValue="+1 (555) 123-4567"
+                        value={profileData.phone}
+                        onChange={(e) =>
+                          setProfileData({ ...profileData, phone: e.target.value })
+                        }
                         className="mt-1 bg-white/10 border-white/30 text-white"
                       />
                     </div>
                     <div>
-                      <Label className="text-white/70 text-sm">Student ID</Label>
+                      <Label className="text-white/70 text-sm">Department</Label>
                       <Input
-                        defaultValue="STU-2024-1234"
-                        className="mt-1 bg-white/10 border-white/30 text-white"
+                        value={profileData.department}
+                        disabled
+                        className="mt-1 bg-white/5 border-white/20 text-white/50"
+                      />
+                    </div>
+                    {userProfile?.user_type === "student" && (
+                      <>
+                        <div>
+                          <Label className="text-white/70 text-sm">Year</Label>
+                          <Input
+                            value={profileData.year}
+                            disabled
+                            className="mt-1 bg-white/5 border-white/20 text-white/50"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-white/70 text-sm">Section</Label>
+                          <Input
+                            value={profileData.section}
+                            disabled
+                            className="mt-1 bg-white/5 border-white/20 text-white/50"
+                          />
+                        </div>
+                        {profileData.club && (
+                          <div>
+                            <Label className="text-white/70 text-sm">Club</Label>
+                            <Input
+                              value={profileData.club}
+                              disabled
+                              className="mt-1 bg-white/5 border-white/20 text-white/50"
+                            />
+                          </div>
+                        )}
+                      </>
+                    )}
+                    <div>
+                      <Label className="text-white/70 text-sm">User Type</Label>
+                      <Input
+                        value={profileData.user_type || ""}
+                        disabled
+                        className="mt-1 bg-white/5 border-white/20 text-white/50 capitalize"
                       />
                     </div>
                   </div>
 
-                  <Button className="bg-primary hover:bg-primary/90">
+                  <Button
+                    className="bg-primary hover:bg-primary/90"
+                    onClick={async () => {
+                      try {
+                        const { error } = await supabase
+                          .from("users")
+                          .update({
+                            full_name: profileData.full_name,
+                            phone: profileData.phone,
+                          })
+                          .eq("id", user?.id);
+
+                        if (error) throw error;
+
+                        await refreshProfile();
+                        toast({
+                          title: "Profile updated",
+                          description: "Your profile has been successfully updated.",
+                        });
+                      } catch (error: any) {
+                        toast({
+                          title: "Error",
+                          description: error.message || "Failed to update profile",
+                          variant: "destructive",
+                        });
+                      }
+                    }}
+                  >
                     Update Profile
                   </Button>
                 </CardContent>
@@ -453,12 +676,22 @@ const Dashboard = () => {
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-white">ID Verification Status</CardTitle>
-                    <Badge className="bg-success text-white">✓ Verified</Badge>
+                    <Badge
+                      className={
+                        userProfile?.id_card_verified
+                          ? "bg-success text-white"
+                          : "bg-warning text-white"
+                      }
+                    >
+                      {userProfile?.id_card_verified ? "✓ Verified" : "Pending"}
+                    </Badge>
                   </div>
                 </CardHeader>
                 <CardContent>
                   <p className="text-white/70">
-                    Your ID has been verified. You can participate in all voting sessions.
+                    {userProfile?.id_card_verified
+                      ? "Your ID has been verified. You can participate in all voting sessions."
+                      : "Your ID verification is pending. Please complete ID verification to participate in voting sessions."}
                   </p>
                 </CardContent>
               </Card>
@@ -470,8 +703,5 @@ const Dashboard = () => {
   );
 };
 
-function Label({ className, children }: { className?: string; children: React.ReactNode }) {
-  return <label className={className}>{children}</label>;
-}
 
 export default Dashboard;
