@@ -101,12 +101,15 @@ All colors MUST be HSL.
 
 @layer utilities {
   .glass-card {
-    @apply backdrop-blur-xl bg-white/5 border border-white/10 rounded-xl shadow-2xl;
+    @apply backdrop-blur-xl rounded-xl shadow-2xl;
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     transition: all 0.3s ease;
   }
 
   .glass-card:hover {
-    @apply bg-white/8 border-white/20;
+    background-color: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.2);
     transform: translateY(-2px);
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
   }
