@@ -45,19 +45,16 @@ export const sendOTP = async (identifier: string, otpType: 'email'): Promise<{ e
 
     // Call backend API to send email OTP
     // Strategy:
-    // - In production (Vercel): Use relative path (same domain) - no VITE_API_URL needed
+    // - In production (Vercel): Use relative path (same domain) - API routes work automatically
     // - In development: 
-    //   * If VITE_API_URL is set, use it (for local backend server on port 3001)
-    //   * Otherwise, use relative path (for Vercel dev or when backend is on same origin)
-    const isProduction = import.meta.env.PROD;
-    const devApiUrl = import.meta.env.VITE_API_URL;
+    //   * Always use relative path '/api/send-otp-email'
+    //   * Vite proxy (vite.config.ts) will forward to backend server if running
+    //   * OR use Vercel dev for local API routes testing
+    // NOTE: VITE_API_URL should NOT be set - use Vite proxy instead
+    const apiEndpoint = '/api/send-otp-email';
     
-    // Build API endpoint URL
-    // Always use relative path in production (Vercel API routes)
-    // In dev, use VITE_API_URL if set, otherwise relative path
-    const apiEndpoint = (!isProduction && devApiUrl) 
-      ? `${devApiUrl}/api/send-otp-email`
-      : '/api/send-otp-email';
+    console.log('📡 Calling OTP API:', apiEndpoint);
+    console.log('🔍 Development mode - using Vite proxy or Vercel dev');
     
     try {
       const response = await fetch(apiEndpoint, {
