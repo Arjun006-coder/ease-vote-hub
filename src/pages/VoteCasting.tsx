@@ -361,7 +361,7 @@ const VoteCasting = () => {
                 <span>{totalVotes} {totalVotes === 1 ? 'vote' : 'votes'}</span>
               </div>
             </div>
-          </div>
+          </motion.div>
 
           {/* Options */}
           <motion.div
@@ -449,7 +449,7 @@ const VoteCasting = () => {
                 </div>
               </RadioGroup>
             )}
-          </div>
+          </motion.div>
 
           {/* GPS Verification */}
           {voteSession.require_gps && (

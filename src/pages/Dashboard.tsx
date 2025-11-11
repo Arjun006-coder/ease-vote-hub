@@ -202,23 +202,24 @@ const Dashboard = () => {
                   );
                   
                   if (winnerOptionId && maxVotes > 0) {
-                  // Fetch winner option text
-                  const { data: winnerOption } = await supabase
-                    .from('voting_options')
-                    .select('option_text')
-                    .eq('id', winnerOptionId)
-                    .single();
-                  
-                  if (winnerOption) {
-                    // Check for ties
-                    const winnersCount = Object.values(voteCounts).filter(
-                      count => count === maxVotes
-                    ).length;
+                    // Fetch winner option text
+                    const { data: winnerOption } = await supabase
+                      .from('voting_options')
+                      .select('option_text')
+                      .eq('id', winnerOptionId)
+                      .single();
                     
-                    if (winnersCount > 1) {
-                      winner = 'Tie';
-                    } else {
-                      winner = winnerOption.option_text;
+                    if (winnerOption) {
+                      // Check for ties
+                      const winnersCount = Object.values(voteCounts).filter(
+                        count => count === maxVotes
+                      ).length;
+                      
+                      if (winnersCount > 1) {
+                        winner = 'Tie';
+                      } else {
+                        winner = winnerOption.option_text;
+                      }
                     }
                   }
                 }
@@ -374,7 +375,11 @@ const Dashboard = () => {
               </div>
 
               {/* Active Voting Sessions */}
-              <div>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.4 }}
+              >
                 <h2 className="text-2xl font-bold text-white mb-4">
                   Active Voting Sessions
                 </h2>
@@ -384,59 +389,65 @@ const Dashboard = () => {
                   ) : votingSessions.length === 0 ? (
                     <p className="text-white/70">No active voting sessions</p>
                   ) : (
-                    votingSessions.slice(0, 2).map((vote) => (
-                    <Card
+                    votingSessions.slice(0, 2).map((vote, index) => (
+                    <motion.div
                       key={vote.id}
-                      className="glass-card border-white/20 hover-scale hover-glow cursor-pointer"
-                      onClick={() => {
-                        // If vote is ended, go to results page; otherwise go to vote page
-                        if (vote.status === 'ended') {
-                          navigate(`/results/${vote.id}`);
-                        } else {
-                          navigate(`/vote/${vote.id}`);
-                        }
-                      }}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.5, delay: 0.5 + index * 0.1 }}
+                      whileHover={{ y: -4 }}
                     >
-                      <CardHeader>
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <CardTitle className="text-white">{vote.title}</CardTitle>
-                            <CardDescription className="text-white/70 mt-2">
-                              {vote.description || "No description"}
-                            </CardDescription>
+                      <Card
+                        className="glass-card border-white/20 hover-scale hover-glow cursor-pointer"
+                        onClick={() => {
+                          // If vote is ended, go to results page; otherwise go to vote page
+                          if (vote.status === 'ended') {
+                            navigate(`/results/${vote.id}`);
+                          } else {
+                            navigate(`/vote/${vote.id}`);
+                          }
+                        }}
+                      >
+                        <CardHeader>
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <CardTitle className="text-white">{vote.title}</CardTitle>
+                              <CardDescription className="text-white/70 mt-2">
+                                {vote.description || "No description"}
+                              </CardDescription>
+                            </div>
+                            <Badge className="bg-success text-white">{vote.status}</Badge>
                           </div>
-                          <Badge className="bg-success text-white">{vote.status}</Badge>
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-3">
-                          {vote.scheduled_end && (
-                            <div className="flex items-center justify-between text-sm">
-                              <span className="text-white/70">Ends:</span>
-                              <span className="text-warning font-semibold">
-                                {new Date(vote.scheduled_end).toLocaleDateString()}
-                              </span>
-                            </div>
-                          )}
-                          {vote.criteria && (
-                            <div className="flex flex-wrap gap-2">
-                              {Object.entries(vote.criteria).map(([key, value]: [string, any]) => (
-                                <Badge
-                                  key={key}
-                                  variant="outline"
-                                  className="border-white/30 text-white/90"
-                                >
-                                  {key}: {Array.isArray(value) ? value.join(", ") : value}
-                                </Badge>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-3">
+                            {vote.scheduled_end && (
+                              <div className="flex items-center justify-between text-sm">
+                                <span className="text-white/70">Ends:</span>
+                                <span className="text-warning font-semibold">
+                                  {new Date(vote.scheduled_end).toLocaleDateString()}
+                                </span>
+                              </div>
+                            )}
+                            {vote.criteria && (
+                              <div className="flex flex-wrap gap-2">
+                                {Object.entries(vote.criteria).map(([key, value]: [string, any]) => (
+                                  <Badge
+                                    key={key}
+                                    variant="outline"
+                                    className="border-white/30 text-white/90"
+                                  >
+                                    {key}: {Array.isArray(value) ? value.join(", ") : value}
+                                  </Badge>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
                     </motion.div>
-                    )
-                  ))}
+                    ))
+                  )}
                 </div>
               </motion.div>
 
