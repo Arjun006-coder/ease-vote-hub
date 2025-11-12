@@ -41,7 +41,7 @@ const VoteCasting = () => {
     if (id && user?.id && voteSession && voteSession.status === 'active') {
       checkUserVote();
     }
-  }, [id, user, voteSession]);
+  }, [id, user?.id, voteSession]);
 
   const fetchVoteSession = async () => {
     if (!id) return;
@@ -118,6 +118,8 @@ const VoteCasting = () => {
     if (!id || !user?.id || !voteSession) return;
 
     try {
+      // Check for ANY existing vote (valid or invalid) for this user in this session
+      // This prevents users from voting multiple times
       const { data, error } = await supabase
         .from('votes')
         .select(`
@@ -126,18 +128,41 @@ const VoteCasting = () => {
         `)
         .eq('session_id', id)
         .eq('user_id', user.id)
-        .eq('is_valid', true)
+        .order('voted_at', { ascending: false })
+        .limit(1)
         .maybeSingle();
 
       if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
         console.error('Error checking user vote:', error);
       } else if (data) {
+        // User has already voted
         setUserVote(data);
         setSelectedOption(data.option_id);
-        // If user already voted and multiple votes not allowed, redirect to results
+        
+        // If multiple votes are not allowed, redirect to results immediately
+        // Even if allow_multiple_votes is true, we still prevent duplicate votes
+        // (allow_multiple_votes should mean users can change their vote, not cast multiple votes)
         if (!voteSession.allow_multiple_votes) {
-          navigate(`/results/${id}`);
+          // Redirect immediately if multiple votes not allowed
+          toast({
+            title: 'Already Voted',
+            description: 'You have already cast your vote for this session. Redirecting to results...',
+          });
+          setTimeout(() => {
+            navigate(`/results/${id}`);
+          }, 1000);
+          return;
         }
+        
+        // If allow_multiple_votes is true, we could allow changing vote
+        // But for now, we'll prevent multiple votes entirely for security
+        toast({
+          title: 'Already Voted',
+          description: 'You have already cast your vote for this session. Redirecting to results...',
+        });
+        setTimeout(() => {
+          navigate(`/results/${id}`);
+        }, 1000);
       }
     } catch (error) {
       console.error('Error checking user vote:', error);
@@ -212,14 +237,34 @@ const VoteCasting = () => {
     setIsSubmitting(true);
 
     try {
-      // Check if user already voted (if multiple votes not allowed)
-      if (!voteSession?.allow_multiple_votes && userVote) {
+      // CRITICAL: Always check database for existing votes BEFORE submitting
+      // Don't rely on state - query database directly to prevent race conditions
+      const { data: existingVote, error: checkError } = await supabase
+        .from('votes')
+        .select('id, option_id, is_valid')
+        .eq('session_id', id)
+        .eq('user_id', user.id)
+        .order('voted_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (checkError && checkError.code !== 'PGRST116') {
+        console.error('Error checking for existing vote:', checkError);
+        throw new Error('Failed to verify vote status');
+      }
+
+      // If user already voted, prevent new vote
+      if (existingVote) {
         toast({
           title: 'Already Voted',
-          description: 'You have already cast your vote for this session',
+          description: 'You have already cast your vote for this session. Redirecting to results...',
           variant: 'destructive',
         });
         setIsSubmitting(false);
+        // Redirect to results immediately
+        setTimeout(() => {
+          navigate(`/results/${id}`);
+        }, 1500);
         return;
       }
 
@@ -252,22 +297,28 @@ const VoteCasting = () => {
         .single();
 
       if (voteError) {
-        // Check if it's a duplicate vote error
-        if (voteError.code === '23505') { // Unique constraint violation
+        // Check if it's a duplicate vote error (unique constraint violation)
+        if (voteError.code === '23505') {
+          throw new Error('You have already voted in this session');
+        }
+        // Check for other constraint violations
+        if (voteError.message?.includes('duplicate') || voteError.message?.includes('already')) {
           throw new Error('You have already voted in this session');
         }
         throw voteError;
       }
 
+      // Update local state immediately
+      setUserVote(vote);
+      
       toast({
         title: "🎉 Vote Cast Successfully!",
-        description: "Your vote has been recorded",
+        description: "Your vote has been recorded. Redirecting to results...",
       });
 
-      // Redirect to results after a short delay
-      setTimeout(() => {
-        navigate(`/results/${id}`);
-      }, 1500);
+      // Redirect to results immediately (don't show winner on voting page)
+      // Use replace to prevent back button from going back to voting page
+      navigate(`/results/${id}`, { replace: true });
     } catch (error: any) {
       console.error('Error casting vote:', error);
       toast({
@@ -275,7 +326,6 @@ const VoteCasting = () => {
         description: error.message || 'Failed to cast vote',
         variant: 'destructive',
       });
-    } finally {
       setIsSubmitting(false);
     }
   };
@@ -358,26 +408,42 @@ const VoteCasting = () => {
                 </CardContent>
               </Card>
             ) : (
-              <RadioGroup value={selectedOption} onValueChange={setSelectedOption}>
+              <RadioGroup 
+                value={selectedOption} 
+                onValueChange={(value) => {
+                  // Prevent changing selection if user already voted
+                  if (!userVote) {
+                    setSelectedOption(value);
+                  }
+                }}
+                disabled={!!userVote}
+              >
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {voteOptions.map((option) => {
                     const optionText = option.option_text;
                     const initials = optionText.split(" ").map((n: string) => n[0]).join("").substring(0, 2).toUpperCase();
                     const details = option.additional_data?.details || '';
+                    const isDisabled = !!userVote;
                     
                     return (
                       <motion.div
                         key={option.id}
-                        whileHover={{ scale: 1.02 }}
+                        whileHover={isDisabled ? {} : { scale: 1.02 }}
                         className="relative"
                       >
                         <Card
-                          className={`glass-card border-2 cursor-pointer transition-all ${
-                            selectedOption === option.id
-                              ? "border-primary glow-shadow"
-                              : "border-white/20 hover:border-primary/50"
+                          className={`glass-card border-2 transition-all ${
+                            isDisabled 
+                              ? "border-white/10 cursor-not-allowed opacity-50" 
+                              : selectedOption === option.id
+                              ? "border-primary glow-shadow cursor-pointer"
+                              : "border-white/20 hover:border-primary/50 cursor-pointer"
                           }`}
-                          onClick={() => setSelectedOption(option.id)}
+                          onClick={() => {
+                            if (!isDisabled) {
+                              setSelectedOption(option.id);
+                            }
+                          }}
                         >
                           <CardContent className="p-6">
                             <div className="flex items-start justify-between mb-4">
@@ -469,18 +535,38 @@ const VoteCasting = () => {
           )}
 
           {/* Submit Button */}
-          <Button
-            size="lg"
-            className="w-full bg-primary hover:bg-primary/90 text-lg py-6 disabled:opacity-50"
-            disabled={!selectedOption || (voteSession.require_gps && !gpsGranted) || isSubmitting || (userVote && !voteSession.allow_multiple_votes)}
-            onClick={handleSubmit}
-          >
-            {isSubmitting 
-              ? "Casting your vote..." 
-              : (userVote && !voteSession.allow_multiple_votes) 
-                ? "Already Voted" 
+          {/* If user already voted, don't show submit button - they should be redirected */}
+          {!userVote && (
+            <Button
+              size="lg"
+              className="w-full bg-primary hover:bg-primary/90 text-lg py-6 disabled:opacity-50"
+              disabled={!selectedOption || (voteSession.require_gps && !gpsGranted) || isSubmitting}
+              onClick={handleSubmit}
+            >
+              {isSubmitting 
+                ? "Casting your vote..." 
                 : "Cast Vote"}
-          </Button>
+            </Button>
+          )}
+          
+          {/* Show message if user already voted */}
+          {userVote && (
+            <Card className="glass-card border-white/20">
+              <CardContent className="p-6 text-center">
+                <CheckCircle className="w-12 h-12 mx-auto mb-4 text-success" />
+                <h3 className="text-xl font-bold text-white mb-2">You've Already Voted</h3>
+                <p className="text-white/70 mb-4">
+                  You have already cast your vote for this session. Redirecting to results...
+                </p>
+                <Button 
+                  onClick={() => navigate(`/results/${id}`)}
+                  className="bg-primary hover:bg-primary/90"
+                >
+                  View Results
+                </Button>
+              </CardContent>
+            </Card>
+          )}
         </motion.div>
       </div>
     </div>

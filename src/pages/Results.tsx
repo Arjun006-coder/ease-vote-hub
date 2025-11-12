@@ -267,6 +267,11 @@ const Results = () => {
 
   const getWinner = () => {
     if (results.length === 0 || totalVotes === 0) return null;
+    
+    // Don't show winner if there's only 1 vote (too early to declare a winner)
+    // Only show winner if there are at least 2 votes
+    if (totalVotes < 2) return null;
+    
     // Only declare winner if there are votes and a clear winner (not a tie)
     const sortedResults = [...results].sort((a, b) => b.votes - a.votes);
     if (sortedResults.length > 0 && sortedResults[0].votes > 0) {
@@ -275,7 +280,16 @@ const Results = () => {
       const winners = sortedResults.filter(r => r.votes === topVotes);
       // Only show winner if there's exactly one winner (no tie)
       if (winners.length === 1) {
-        return sortedResults[0];
+        // Also check if the session has ended - if it's still active, don't show winner badge
+        // (results can still change while voting is active)
+        if (voteSession?.status === 'ended') {
+          return sortedResults[0];
+        }
+        // For active sessions, only show winner if it's clearly leading (more than 50% of votes)
+        const percentage = (sortedResults[0].votes / totalVotes) * 100;
+        if (percentage > 50) {
+          return sortedResults[0];
+        }
       }
     }
     return null;
